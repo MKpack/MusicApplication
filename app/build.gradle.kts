@@ -42,10 +42,21 @@ android {
 }
 
 dependencies {
+    //retrofit网络请求
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.gson)
+    implementation(libs.okhttp.core)
+    implementation(libs.okhttp.logging)
+    implementation(libs.gson)
+    implementation(libs.coroutines.core)
+    implementation(libs.coroutines.android)
+    //hilt注入
     ksp("androidx.room:room-compiler:2.7.2")
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
+
+//    implementation("androidx.navigation:navigation-compose:2.9.0")
     implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

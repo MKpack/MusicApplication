@@ -49,7 +49,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.log
 
 @Composable
-fun LoginEntry(loginViewModel: LoginViewModel = hiltViewModel()) {
+fun LoginEntry(loginViewModel: LoginViewModel) {
 //    var mode by remember { mutableStateOf(LoginMode.ACCOUNT) }
     val mode by loginViewModel.mode.collectAsState()
     BackHandler(enabled = mode != LoginMode.ACCOUNT) {
@@ -79,7 +79,7 @@ fun LoginEntry(loginViewModel: LoginViewModel = hiltViewModel()) {
         )
 
         when (mode) {
-            LoginMode.ACCOUNT -> AccountForm(loginViewModel = loginViewModel) { loginViewModel.changeMode(it) }
+            LoginMode.ACCOUNT -> AccountForm(loginViewModel = loginViewModel)
             LoginMode.REGISTER -> RegisterForm(loginViewModel = loginViewModel)
             LoginMode.FORGET -> ForgetForm(loginViewModel = loginViewModel)
         }
@@ -108,7 +108,7 @@ fun LoginEntry(loginViewModel: LoginViewModel = hiltViewModel()) {
 
 //登陆组件
 @Composable
-fun AccountForm(loginViewModel: LoginViewModel, onModeChange: (LoginMode)->Unit,) {
+fun AccountForm(loginViewModel: LoginViewModel) {
 //    var email by rememberSaveable { mutableStateOf("") }
 //    var pwd by rememberSaveable { mutableStateOf("") }
 //    var canLogin by rememberSaveable { mutableStateOf(false) }
@@ -151,10 +151,10 @@ fun AccountForm(loginViewModel: LoginViewModel, onModeChange: (LoginMode)->Unit,
             verticalAlignment = Alignment.CenterVertically
         ) {
             NoRippleTextButton("忘记密码", ) {
-                onModeChange(LoginMode.FORGET)
+                loginViewModel.changeMode(LoginMode.FORGET)
             }
             NoRippleTextButton("还没有账号?去注册") {
-                onModeChange(LoginMode.REGISTER)
+                loginViewModel.changeMode(LoginMode.REGISTER)
             }
         }
 
@@ -187,6 +187,7 @@ fun RegisterForm(loginViewModel: LoginViewModel) {
             onClick = {
 
             },
+            enabled = loginViewModel.ifCanRegister(),
             modifier = Modifier
                 .fillMaxWidth(0.8f)
                 .height(45.dp),
@@ -225,6 +226,7 @@ fun ForgetForm(loginViewModel: LoginViewModel) {
         Spacer(modifier = Modifier.height(10.dp))
         Button(
             onClick = {},
+            enabled = loginViewModel.ifCanReset(),
             modifier = Modifier
                 .fillMaxWidth(0.8f)
                 .height(45.dp),

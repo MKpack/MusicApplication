@@ -7,11 +7,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlin.text.isEmpty
 
+
+//这是状态[登陆，注册，忘记密码]
 enum class LoginMode {ACCOUNT, REGISTER, FORGET}
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(): ViewModel() {
-    //这是状态[登陆，注册，忘记密码]
     private val _mode = MutableStateFlow(LoginMode.ACCOUNT)
     val mode: StateFlow<LoginMode> = _mode
 
@@ -32,6 +33,7 @@ class LoginViewModel @Inject constructor(): ViewModel() {
         _mode.value = mode
         clearAllValue()
     }
+
     //这边是改变观察值的变化
     fun emailUpdate(it: String) {
         _email.value = it
@@ -49,6 +51,16 @@ class LoginViewModel @Inject constructor(): ViewModel() {
 
     fun ifCanLogin(): Boolean {
         return !_email.value.isEmpty() && !_password.value.isEmpty()
+    }
+
+    fun ifCanRegister(): Boolean {
+        return !_email.value.isEmpty() && !_authCode.value.isEmpty() &&
+                !_password.value.isEmpty() && !_passwordAgain.value.isEmpty()
+    }
+
+    fun ifCanReset(): Boolean {
+        return !_email.value.isEmpty() && !_authCode.value.isEmpty() &&
+                !_password.value.isEmpty()
     }
 
     fun clearAllValue() {
