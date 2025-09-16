@@ -1,5 +1,6 @@
 package com.example.musicapplication
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,16 +25,19 @@ import com.example.musicapplication.ui.mainPage.MainPage
 import com.example.musicapplication.ui.mainPage.MainPageViewModel
 import com.example.musicapplication.ui.theme.MusicApplicationTheme
 import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.qualifiers.ApplicationContext
 
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    private val mContext: Context = this
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             MusicApplicationTheme {
-                AppNavigation()
+                AppNavigation(this)
             }
         }
     }
@@ -41,7 +45,7 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(context: Context) {
     val navController = rememberNavController()
     NavHost(
         navController = navController,
@@ -49,7 +53,7 @@ fun AppNavigation() {
     ) {
         composable(RouterConfig.LOGIN) { navBackStackEntry ->
             val loginViewModel: LoginViewModel = hiltViewModel(navBackStackEntry)
-            LoginEntry(loginViewModel)
+            LoginEntry(loginViewModel, context, navController)
         }
         composable(RouterConfig.MAINPAGE) { navBackStackEntry ->
             val mainPageViewModel: MainPageViewModel = hiltViewModel(navBackStackEntry)

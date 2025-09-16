@@ -50,6 +50,7 @@ dependencies {
     implementation(libs.gson)
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
+    implementation("com.squareup.retrofit2:converter-scalars:2.11.0")
     //hilt注入
     ksp("androidx.room:room-compiler:2.7.2")
     ksp(libs.hilt.compiler)

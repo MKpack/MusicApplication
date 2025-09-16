@@ -1,6 +1,6 @@
 package com.example.musicapplication.ui.component
 
-import android.R
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -50,7 +50,8 @@ fun ButtonRightTextField(
     text: String,
     onValueChange: (String) -> Unit,
     hint: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    isOk: Boolean
 ) {
     var btnText by rememberSaveable { mutableStateOf("获取验证码") }
     BasicTextField(
@@ -94,8 +95,8 @@ fun ButtonRightTextField(
                             interactionSource = interactionSource,
                             indication = null,
                             onClick = {
+                                onClick()
                                 scope.launch {
-                                    onClick
                                     for (i in 60 downTo 1) {
                                         btnText = "${i}s"
                                         delay(1000)
@@ -103,7 +104,7 @@ fun ButtonRightTextField(
                                     btnText = "获取验证码"
                                 }
                             },
-                            enabled = btnText == "获取验证码"
+                            enabled = btnText == "获取验证码" && isOk
                         )
                 ) {
                     BasicText(
@@ -130,6 +131,7 @@ fun showButtonRightTextField() {
             { text = it },
             "获取验证码",
             {},
+            true
         )
     }
 }
