@@ -2,6 +2,7 @@ package com.example.musicapplication
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -30,14 +31,22 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+    private val TAG = "MainActivity"
     private val mContext: Context = this
-
+    private var startD: String = RouterConfig.LOGIN
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        val prefs = this.getSharedPreferences("token_prefs", Context.MODE_PRIVATE)
+        if (prefs.getString("access_token", null) != null
+            || prefs.getString("refresh_token", null) != null)
+        {
+            startD = RouterConfig.MAINPAGE
+        }
         setContent {
             MusicApplicationTheme {
-                AppNavigation(this)
+                AppNavigation(this, startD)
             }
         }
     }
@@ -45,11 +54,11 @@ class MainActivity : ComponentActivity() {
 
 
 @Composable
-fun AppNavigation(context: Context) {
+fun AppNavigation(context: Context, startD: String) {
     val navController = rememberNavController()
     NavHost(
         navController = navController,
-        startDestination = "login"
+        startDestination = startD
     ) {
         composable(RouterConfig.LOGIN) { navBackStackEntry ->
             val loginViewModel: LoginViewModel = hiltViewModel(navBackStackEntry)
@@ -57,7 +66,7 @@ fun AppNavigation(context: Context) {
         }
         composable(RouterConfig.MAINPAGE) { navBackStackEntry ->
             val mainPageViewModel: MainPageViewModel = hiltViewModel(navBackStackEntry)
-            MainPage(mainPageViewModel)
+            MainPage(mainPageViewModel, context)
         }
     }
 }

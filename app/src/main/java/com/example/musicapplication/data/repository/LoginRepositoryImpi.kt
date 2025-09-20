@@ -1,36 +1,42 @@
 package com.example.musicapplication.data.repository
 
 import android.content.Context
-import android.content.SharedPreferences
 import android.util.Log
 import com.example.musicapplication.data.remote.api.LoginApi
 import dagger.hilt.android.qualifiers.ApplicationContext
 import jakarta.inject.Inject
 import androidx.core.content.edit
+import com.example.musicapplication.data.remote.api.RefreshTokenApi
 import com.example.musicapplication.data.remote.api.RegisterApi
+import com.example.musicapplication.data.remote.dto.LoginRequest
+import com.example.musicapplication.data.remote.dto.TokenDto
 
 
 class LoginRepositoryImpi @Inject constructor(
     private val loginApi: LoginApi,
     private val registerApi: RegisterApi,
+    private val refreshTokenApi: RefreshTokenApi,
     @ApplicationContext private val context: Context
 ) : LoginRepository {
     private val TAG = "LoginRepositoryImpi"
-    override suspend fun login(username: String, password: String): Result<String> {
-        val token = loginApi.login(username, password)
-        if (!token.isEmpty()) {
-            saveToken(token)
-            return Result.success(token)
+
+    override suspend fun login(username: String, password: String): String {
+        val apiResponse = loginApi.login(LoginRequest(username, password))
+        if (apiResponse.isSuccessful) {
+            val res = apiResponse.body()
+            if (res?.success == true) {
+                val accessToken = res.data?.accessToken
+                val refreshToken = res.data?.refreshToken
+                Log.d(TAG, accessToken + refreshToken)
+                saveToken(accessToken, refreshToken)
+                return "success"
+            }
+            else {
+                return res?.message + ""
+            }
         }
         else {
-            return Result.failure(Exception("登陆失败，token为空"))
-        }
-    }
-    //保存token
-    private fun saveToken(token: String) {
-        val sp = context.getSharedPreferences("prefs", Context.MODE_PRIVATE)
-        sp.edit {
-            putString("token", token)
+            return "请求失败"
         }
     }
 
@@ -60,8 +66,33 @@ class LoginRepositoryImpi @Inject constructor(
         TODO("Not yet implemented")
     }
 
-    override suspend fun getCachedToken() {
-        TODO("Not yet implemented")
+    override suspend fun refresh(refreshToken: String): String? {
+        Log.d(TAG, "refreshToken: $refreshToken")
+        val accessToken = refreshTokenApi.getRefreshed(TokenDto(refreshToken))
+        saveToken(accessToken.data, refreshToken)
+        return accessToken.data
+    }
+
+    //保存token
+    private fun saveToken(accessToken: String?, refreshToken: String?) {
+        val sp = context.getSharedPreferences("token_prefs", Context.MODE_PRIVATE)
+        sp.edit {
+            if (accessToken != "")
+                putString("access_token", accessToken)
+            if (refreshToken != "")
+                putString("refresh_token", refreshToken)
+        }
+    }
+    //读取token
+    fun getCachedToken(): Map<String, String>  {
+        val sp = context.getSharedPreferences("token_prefs", Context.MODE_PRIVATE)
+        val tokenMap = mutableMapOf<String, String>()
+        val refreshToken = sp.getString("refresh_token", "")
+        val accessToken = sp.getString("access_token", "")
+        tokenMap["accessToken"] = accessToken.toString()
+        tokenMap["refreshToken"] = refreshToken.toString()
+
+        return tokenMap
     }
 
 }

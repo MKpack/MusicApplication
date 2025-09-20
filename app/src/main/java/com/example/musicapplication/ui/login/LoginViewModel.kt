@@ -51,16 +51,19 @@ class LoginViewModel @Inject constructor(
     //login网络请求
     fun login() {
         viewModelScope.launch {
-
+            val msg = loginRepositoryImpi.login(_email.value, _password.value)
+            if (msg != "success")
+                _loginStatus.value = "fail"
+            else
+                _loginStatus.value = "success"
         }
     }
 
-    fun sendCode(): String {
+    fun sendCode() {
         viewModelScope.launch {
             val msg = loginRepositoryImpi.getAuthCode(_email.value)
             message = msg
         }
-        return message
     }
 
     fun register(): String {
@@ -68,6 +71,10 @@ class LoginViewModel @Inject constructor(
             val msg = loginRepositoryImpi.register(
                 _email.value, _authCode.value, _password.value, _passwordAgain.value
             )
+            if (msg == "success") {
+                _mode.value = LoginMode.ACCOUNT
+            }
+
             message = msg
         }
         return message
@@ -77,6 +84,9 @@ class LoginViewModel @Inject constructor(
     fun isEmailValid(email: String) =
         Patterns.EMAIL_ADDRESS.matcher(email).matches()
 
+    fun changeLoginStatus() {
+        _loginStatus.value = ""
+    }
     //改变状态方法,即切换组件
     fun changeMode(mode: LoginMode): Unit {
         _mode.value = mode

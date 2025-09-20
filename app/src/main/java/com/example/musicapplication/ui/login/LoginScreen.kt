@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.musicapplication.R
@@ -68,6 +69,7 @@ fun LoginEntry(
                 navController.navigate(RouterConfig.MAINPAGE)
             }
             Toast.makeText(context, "登陆成功", Toast.LENGTH_SHORT).show()
+            loginViewModel.changeLoginStatus()
         }
     }
 
@@ -201,8 +203,8 @@ fun RegisterForm(loginViewModel: LoginViewModel, context: Context) {
         Spacer(modifier = Modifier.height(10.dp))
         ButtonRightTextField(authCode, { loginViewModel.authCodeUpdate(it) },  "验证码",
             onClick = {
-                val msg = loginViewModel.sendCode()
-                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                loginViewModel.sendCode()
+                Toast.makeText(context, "发送验证码成功", Toast.LENGTH_SHORT).show()
             },
             isOk = loginViewModel.isEmailValid(email) && email != ""
         )
@@ -237,9 +239,6 @@ fun RegisterForm(loginViewModel: LoginViewModel, context: Context) {
             onClick = {
                 val msg = loginViewModel.register()
                 Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-                if (msg == "success") {
-                    loginViewModel.changeMode(LoginMode.ACCOUNT)
-                }
             },
             enabled = loginViewModel.ifCanRegister(),
             modifier = Modifier
