@@ -19,6 +19,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -105,7 +106,7 @@ fun LoginEntry(
             modifier = Modifier.fillMaxWidth(0.8f).padding(top = 180.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Divider(
+            HorizontalDivider(
                 color = Color.Black,
                 thickness = 1.dp,
                 modifier = Modifier.width(100.dp)
@@ -114,7 +115,7 @@ fun LoginEntry(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(start = 10.dp, end = 10.dp)
             )
-            Divider(
+            HorizontalDivider(
                 color = Color.Black,
                 thickness = 1.dp,
                 modifier = Modifier.width(100.dp)
@@ -236,10 +237,7 @@ fun RegisterForm(loginViewModel: LoginViewModel, context: Context) {
         }
         Spacer(modifier = Modifier.height(10.dp))
         Button(
-            onClick = {
-                val msg = loginViewModel.register()
-                Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
-            },
+            onClick = { val msg = loginViewModel.register() },
             enabled = loginViewModel.ifCanRegister(),
             modifier = Modifier
                 .fillMaxWidth(0.8f)
@@ -274,14 +272,14 @@ fun ForgetForm(loginViewModel: LoginViewModel, context: Context) {
         NewTextField(email, { loginViewModel.emailUpdate(it) }, hint = "邮箱")
         Spacer(modifier = Modifier.height(10.dp))
         ButtonRightTextField(authCode, { loginViewModel.authCodeUpdate(it) }, hint = "验证码",
-            onClick = { },
+            onClick = { loginViewModel.sendCode() },
             isOk = loginViewModel.isEmailValid(email) && email != ""
         )
         Spacer(modifier = Modifier.height(10.dp))
         PasswordTextField(pwd, { loginViewModel.passwordUpdate(it) }, "设置新密码")
         Spacer(modifier = Modifier.height(10.dp))
         Button(
-            onClick = {},
+            onClick = { loginViewModel.reset() },
             enabled = loginViewModel.ifCanReset(),
             modifier = Modifier
                 .fillMaxWidth(0.8f)

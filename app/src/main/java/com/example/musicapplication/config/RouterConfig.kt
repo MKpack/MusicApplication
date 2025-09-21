@@ -5,4 +5,8 @@ object RouterConfig {
     const val LOGIN = "login"
     //首页
     const val MAINPAGE = "mainPage"
+
+    const val HOME = "home"
+
+    const val PROFILE = "profile"
 }

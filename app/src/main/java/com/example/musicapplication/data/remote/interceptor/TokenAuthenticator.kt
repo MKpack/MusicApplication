@@ -14,7 +14,7 @@ import java.util.concurrent.CompletableFuture
 
 /**
  * 如果返回401或403进入该authenticate方法，在该方法中我们可以进行access的刷新
- * 问题：如果多个线程同时访问会多次刷新access（已解决）
+ * 问题：如果多个线程同时访问会多次刷新access（已解决）重复刷新我没有能力避免。
  */
 class TokenAuthenticator(
     private val context: Context,

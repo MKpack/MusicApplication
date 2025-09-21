@@ -73,11 +73,23 @@ class LoginViewModel @Inject constructor(
             )
             if (msg == "success") {
                 _mode.value = LoginMode.ACCOUNT
+                clearAllValue()
             }
 
             message = msg
         }
         return message
+    }
+
+    fun reset() {
+        viewModelScope.launch {
+             val msg = loginRepositoryImpi.resetPassword(_email.value, _authCode.value, _password.value)
+             if (msg == "success") {
+                 _mode.value = LoginMode.ACCOUNT
+                 clearAllValue()
+             }
+
+        }
     }
 
 

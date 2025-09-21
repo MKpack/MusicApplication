@@ -62,8 +62,10 @@ class LoginRepositoryImpi @Inject constructor(
         email: String,
         authCode: String,
         newPassword: String
-    ) {
-        TODO("Not yet implemented")
+    ): String? {
+        val response = loginApi.resetPassword(email, authCode, password = newPassword)
+        Log.d(TAG, response.body()?.data.toString())
+        return response.body()?.data
     }
 
     override suspend fun refresh(refreshToken: String): String? {
