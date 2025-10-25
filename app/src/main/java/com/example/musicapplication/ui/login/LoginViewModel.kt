@@ -50,6 +50,11 @@ class LoginViewModel @Inject constructor(
 
     //login网络请求
     fun login() {
+        //开发阶段测试
+        if (_email.value == "root" && _password.value == "1") {
+            _loginStatus.value = "success"
+            return
+        }
         viewModelScope.launch {
             val msg = loginRepositoryImpi.login(_email.value, _password.value)
             if (msg != "success")

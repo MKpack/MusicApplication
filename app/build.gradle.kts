@@ -51,6 +51,8 @@ dependencies {
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)
     implementation("com.squareup.retrofit2:converter-scalars:2.11.0")
+    implementation(libs.androidx.palette.ktx)
+    implementation(libs.ui)
     //hilt注入
     ksp("androidx.room:room-compiler:2.7.2")
     ksp(libs.hilt.compiler)
@@ -60,6 +62,8 @@ dependencies {
     //导航组件
     implementation("androidx.navigation:navigation-compose:2.9.4")
     implementation("androidx.compose.material3:material3")
+
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
     implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.androidx.core.ktx)
