@@ -12,16 +12,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.lerp
-import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.example.musicapplication.ui.component.AppleMusicBackground
-import com.example.musicapplication.ui.component.RotatingGradientBackground
-import kotlin.math.max
 
 fun getStaticBitmap(context: Context, resId: Int): Bitmap {
     val drawable = context.getDrawable(resId) as BitmapDrawable
