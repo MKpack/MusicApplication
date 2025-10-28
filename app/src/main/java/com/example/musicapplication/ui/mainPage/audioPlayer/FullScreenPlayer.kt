@@ -54,7 +54,6 @@ fun FullScreenPlayer(
     val colors by playerViewModel.dominantColors.collectAsState()
     val songTitle by playerViewModel.songTitle.collectAsState()
     val songSinger by playerViewModel.songSinger.collectAsState()
-    val currentProgress by playerViewModel.currentProgress.collectAsState()
     LaunchedEffect(Unit) {
         val bitmap = getStaticBitmap(context = context, R.drawable.static_cover);
         playerViewModel.updateColorsFromBitmap(bitmap)
@@ -127,7 +126,8 @@ fun FullScreenPlayer(
                 .padding(top = 25.dp)
                 .padding(horizontal = 30.dp),
         ) {
-            MusicProgressBar(currentProgress, onSeek = { playerViewModel.onSeek(it) })
+//            MusicProgressBar(currentProgress, onSeek = { playerViewModel.onSeek(it) })
+            MusicProgressBar2(playerViewModel)
         }
     }
 }

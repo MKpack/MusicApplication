@@ -1,14 +1,11 @@
 package com.example.musicapplication.ui.mainPage.audioPlayer
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.palette.graphics.Palette
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
@@ -30,9 +27,15 @@ class PlayerViewModel @Inject constructor(
     private val _songSinger = MutableStateFlow("薛之谦")
     val songSinger: StateFlow<String> = _songSinger
 
-    //indictor progress
+    //indictor progress 进度
     private val _currentProgress = MutableStateFlow(0.5f)
     val currentProgress: StateFlow<Float> = _currentProgress
+
+    //left_time, right_time
+    private val _leftTime = MutableStateFlow("0:00")
+    val leftTime: StateFlow<String> = _leftTime
+    private val _rightTime = MutableStateFlow("-4:22")
+    val rightTime: StateFlow<String> = _rightTime
 
     fun updateColorsFromBitmap(bitmap: Bitmap) {
         Palette.from(bitmap).generate { palette ->
@@ -43,8 +46,9 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    fun onSeek(tmp: Float) {
+    fun updateProgress(tmp: Float) {
         _currentProgress.value = tmp
+        Log.d(TAG, "progress: " + tmp)
     }
 
 }

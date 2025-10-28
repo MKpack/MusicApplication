@@ -1,10 +1,12 @@
-package com.example.musicapplication.ui.component
+package com.example.musicapplication.ui.mainPage.audioPlayer
 
-import android.R
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,9 +18,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -32,20 +33,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.abs
 
-/**
- * 这个组件写地有点问题不使用，我们使用MusicProgressBar2
- */
 @Composable
-fun MusicProgressBar(
-    progress: Float,
-    onSeek: (Float) -> Unit,
+fun MusicProgressBar2(
+    playerViewModel: PlayerViewModel
 ) {
-    val TAG = "MusicProgressBar"
-    var dragProgress by remember { mutableFloatStateOf(progress) }
-    var isDragging by remember { mutableStateOf(false) }
-    var isPressed by remember { mutableStateOf(false) }
+    val TAG = "MusicProgressBar2"
     val thumbRadius = 20.dp
     val thumbRadiusPx = with(LocalDensity.current) { thumbRadius.toPx() }
+
+    val progress by playerViewModel.currentProgress.collectAsState()
+    var isPressed by remember { mutableStateOf(false) }
+    var isDragging by remember { mutableStateOf(false) }
+
+    val interactionSource = remember { MutableInteractionSource() }
+    val isDowningMinutes by interactionSource.collectIsPressedAsState()
     Column {
         Box(
             modifier = Modifier
@@ -57,8 +58,7 @@ fun MusicProgressBar(
                 .pointerInput(Unit) {
                     detectTapGestures { offset ->
                         val newProgress = (offset.x / size.width).coerceIn(0f, 1f)
-                        onSeek(newProgress)
-                        dragProgress = newProgress
+                            playerViewModel.updateProgress(newProgress)
                     }
                 }
                 //拖动跳转位置
@@ -66,7 +66,7 @@ fun MusicProgressBar(
                     detectHorizontalDragGestures(
                         onDragStart = { offset->
                             isPressed = true
-                            val thumbCenterX = dragProgress * size.width
+                            val thumbCenterX = progress * size.width
                             val touchedAllow = abs(offset.x - thumbCenterX) <= thumbRadiusPx
                             if (!touchedAllow) return@detectHorizontalDragGestures
                             isDragging = true
@@ -74,14 +74,13 @@ fun MusicProgressBar(
                         onHorizontalDrag = { change, _ ->
                             if (!isDragging)  return@detectHorizontalDragGestures
                             val deltaX = change.positionChange().x
-                            Log.d(TAG, "dragProgress: " + dragProgress)
-                            dragProgress = (dragProgress + deltaX / size.width).coerceIn(0f, 1f)
+                            val newProgress = (progress + deltaX / size.width).coerceIn(0f, 1f)
+                            playerViewModel.updateProgress(newProgress)
                         },
                         onDragEnd = {
                             isPressed = false
                             if (!isDragging)  return@detectHorizontalDragGestures
                             isDragging = false
-                            onSeek(dragProgress)
                         },
                         onDragCancel = {
                             isPressed = false
@@ -93,7 +92,7 @@ fun MusicProgressBar(
         ){
             Box(
                 Modifier.fillMaxHeight()
-                    .fillMaxWidth(if (isDragging) dragProgress else progress)
+                    .fillMaxWidth(progress)
                     .clip(RoundedCornerShape(3.dp))
                     .background(if (isPressed) Color.White else Color(0xFFDADADA))
             )
@@ -104,18 +103,24 @@ fun MusicProgressBar(
                 .background(Color.Transparent)
         )
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(
+                    interactionSource,
+                    indication = null,
+                    onClick = {}
+                ),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 "0:00",
                 fontSize = 12.sp,
-                color = Color(0xFFBBBABA)
+                color = if (isPressed || isDowningMinutes) Color.White else Color(0xFFBBBABA)
             )
             Text(
                 "-4:23",
                 fontSize = 11.sp,
-                color = Color(0xFFBBBABA)
+                color = if (isPressed || isDowningMinutes) Color.White else Color(0xFFBBBABA)
             )
         }
     }
