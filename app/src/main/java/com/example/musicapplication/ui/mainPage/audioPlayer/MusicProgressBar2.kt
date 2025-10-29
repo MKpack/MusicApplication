@@ -31,6 +31,7 @@ import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.musicapplication.utils.MusicProgressUtils
 import kotlin.math.abs
 
 @Composable
@@ -38,7 +39,7 @@ fun MusicProgressBar2(
     playerViewModel: PlayerViewModel
 ) {
     val TAG = "MusicProgressBar2"
-    val thumbRadius = 20.dp
+    val thumbRadius = 25.dp
     val thumbRadiusPx = with(LocalDensity.current) { thumbRadius.toPx() }
 
     val progress by playerViewModel.currentProgress.collectAsState()
@@ -47,6 +48,10 @@ fun MusicProgressBar2(
 
     val interactionSource = remember { MutableInteractionSource() }
     val isDowningMinutes by interactionSource.collectIsPressedAsState()
+
+    val leftTime by playerViewModel.leftTime.collectAsState()
+    val allTime by playerViewModel.allTime.collectAsState()
+
     Column {
         Box(
             modifier = Modifier
@@ -113,12 +118,12 @@ fun MusicProgressBar2(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                "0:00",
+                text = MusicProgressUtils.convertSecondsToMinutes(leftTime),
                 fontSize = 12.sp,
                 color = if (isPressed || isDowningMinutes) Color.White else Color(0xFFBBBABA)
             )
             Text(
-                "-4:23",
+                text = "-" + MusicProgressUtils.convertSecondsToMinutes(allTime - leftTime),
                 fontSize = 11.sp,
                 color = if (isPressed || isDowningMinutes) Color.White else Color(0xFFBBBABA)
             )

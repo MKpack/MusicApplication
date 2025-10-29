@@ -20,6 +20,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -43,6 +45,8 @@ fun MiniPlayer(
     playerViewModel: PlayerViewModel
 ) {
     val isPlaying = remember { mutableStateOf(true) }
+    val songTitle by playerViewModel.songTitle.collectAsState()
+    val songBitmap by playerViewModel.songBitmap.collectAsState()
     Column(
         modifier = Modifier
             .clickable {
@@ -66,7 +70,7 @@ fun MiniPlayer(
             ) {
                 //封面
                 Image(
-                    painter = painterResource(R.drawable.static_cover),
+                    painter = painterResource(songBitmap),
                     contentDescription = null,
                     modifier = Modifier
                         .size(50.dp)
@@ -76,7 +80,7 @@ fun MiniPlayer(
                 Spacer(modifier = Modifier.width(12.dp))
                 //歌曲标题
                 Text(
-                    text = "方圆几里",
+                    text = songTitle,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     fontSize = 17.sp,

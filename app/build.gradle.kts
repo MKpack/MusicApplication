@@ -42,6 +42,14 @@ android {
 }
 
 dependencies {
+    //核心ExoPlayer（必须）
+    implementation("androidx.media3:media3-exoplayer:1.8.0")
+    //UI控件（可选，比如 PlayerView）
+    implementation("androidx.media3:media3-ui:1.8.0")
+    // 要加载在线音频（HLS / MP3 URL）
+    implementation("androidx.media3:media3-datasource-okhttp:1.8.0")
+    //可选：用于媒体通知（比如播放控制通知栏）
+    implementation("androidx.media3:media3-session:1.8.0")
     //retrofit网络请求
     implementation(libs.retrofit.core)
     implementation(libs.retrofit.gson)
