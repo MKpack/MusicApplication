@@ -1,11 +1,9 @@
-package com.example.musicapplication.ui.model
-
-import android.graphics.Bitmap
+package com.example.musicapplication.data.remote.model
 
 data class Song(
+    var songId: Int,
     var songTitle: String,
     var singer: String,
-    var songTimeLong: Int,
     var isLoved: Boolean,
     var bitmap: Int
 )

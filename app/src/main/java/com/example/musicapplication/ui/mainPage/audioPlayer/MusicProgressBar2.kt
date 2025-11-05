@@ -44,13 +44,13 @@ fun MusicProgressBar2(
 
     val progress by playerViewModel.currentProgress.collectAsState()
     var isPressed by remember { mutableStateOf(false) }
-    var isDragging by remember { mutableStateOf(false) }
-
+//    var isDragging by remember { mutableStateOf(false) }
     val interactionSource = remember { MutableInteractionSource() }
     val isDowningMinutes by interactionSource.collectIsPressedAsState()
 
-    val leftTime by playerViewModel.leftTime.collectAsState()
-    val allTime by playerViewModel.allTime.collectAsState()
+    val currentPosition by playerViewModel.currentPosition.collectAsState()
+    val duration by playerViewModel.duration.collectAsState()
+    val isDragging by playerViewModel.isDragging.collectAsState()
 
     Column {
         Box(
@@ -63,7 +63,8 @@ fun MusicProgressBar2(
                 .pointerInput(Unit) {
                     detectTapGestures { offset ->
                         val newProgress = (offset.x / size.width).coerceIn(0f, 1f)
-                            playerViewModel.updateProgress(newProgress)
+                        playerViewModel.updateProgress(newProgress)
+                        playerViewModel.seekTo()
                     }
                 }
                 //拖动跳转位置
@@ -74,7 +75,8 @@ fun MusicProgressBar2(
                             val thumbCenterX = progress * size.width
                             val touchedAllow = abs(offset.x - thumbCenterX) <= thumbRadiusPx
                             if (!touchedAllow) return@detectHorizontalDragGestures
-                            isDragging = true
+//                            isDragging = true
+                            playerViewModel.changeDraggingStatus(true)
                         },
                         onHorizontalDrag = { change, _ ->
                             if (!isDragging)  return@detectHorizontalDragGestures
@@ -85,11 +87,14 @@ fun MusicProgressBar2(
                         onDragEnd = {
                             isPressed = false
                             if (!isDragging)  return@detectHorizontalDragGestures
-                            isDragging = false
+                            playerViewModel.seekTo()
+//                            isDragging = false
+                            playerViewModel.changeDraggingStatus(false)
                         },
                         onDragCancel = {
                             isPressed = false
-                            isDragging = false
+//                            isDragging = false
+                            playerViewModel.changeDraggingStatus(false)
                         }
                     )
                 }
@@ -118,12 +123,12 @@ fun MusicProgressBar2(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = MusicProgressUtils.convertSecondsToMinutes(leftTime),
+                text = MusicProgressUtils.convertSecondsToMinutes(currentPosition),
                 fontSize = 12.sp,
                 color = if (isPressed || isDowningMinutes) Color.White else Color(0xFFBBBABA)
             )
             Text(
-                text = "-" + MusicProgressUtils.convertSecondsToMinutes(allTime - leftTime),
+                text = "-" + MusicProgressUtils.convertSecondsToMinutes(duration - currentPosition),
                 fontSize = 11.sp,
                 color = if (isPressed || isDowningMinutes) Color.White else Color(0xFFBBBABA)
             )

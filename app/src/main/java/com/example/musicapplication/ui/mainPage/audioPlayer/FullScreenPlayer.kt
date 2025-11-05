@@ -45,9 +45,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.musicapplication.domain.model.MusicSource
 import com.example.musicapplication.ui.component.AppleMusicBackground
 import com.example.musicapplication.ui.component.MusicProgressBar
 import kotlinx.coroutines.flow.MutableStateFlow
+import java.io.File
 
 fun getStaticBitmap(context: Context, resId: Int): Bitmap {
     val drawable = context.getDrawable(resId) as BitmapDrawable
@@ -64,7 +66,7 @@ fun FullScreenPlayer(
     val songSinger by playerViewModel.songSinger.collectAsState()
     val songBitmap by playerViewModel.songBitmap.collectAsState()
     val songIsLove by playerViewModel.songIsLove.collectAsState()
-    var isPaused by remember { mutableStateOf(false) }
+    val isPlaying by playerViewModel.isPlaying.collectAsState()
     LaunchedEffect(Unit) {
         val bitmap = getStaticBitmap(context = context, songBitmap);
         playerViewModel.updateColorsFromBitmap(bitmap)
@@ -161,13 +163,25 @@ fun FullScreenPlayer(
                 }
                 IconButton(
                     onClick = {
-                        isPaused = !isPaused
+                        if (isPlaying) {
+                            playerViewModel.pause()
+                        }
+                        else {
+                            val file = File(context.getExternalFilesDir("music"), "xiangnideye.mp3")
+                            playerViewModel.play(musicSource =
+                                MusicSource.Local(
+                                    id = 1,
+                                    path = file
+                                )
+
+                            )
+                        }
                     },
                     modifier = Modifier.size(90.dp)
                         .clip(RoundedCornerShape(90.dp))
                 ) {
                     Icon(
-                        painter = painterResource(if (isPaused) R.drawable.play_icon else R.drawable.pause_icon),
+                        painter = painterResource(if (isPlaying)  R.drawable.pause_icon else  R.drawable.play_icon),
                         contentDescription = null,
                         modifier = Modifier
                             .size(60.dp),
