@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
 import com.example.musicapplication.domain.model.MusicSource
 import com.example.musicapplication.ui.component.AppleMusicBackground
 import com.example.musicapplication.ui.component.MusicProgressBar
@@ -62,18 +63,18 @@ fun FullScreenPlayer(
     playerViewModel: PlayerViewModel,
 ) {
     val colors by playerViewModel.dominantColors.collectAsState()
-    val songTitle by playerViewModel.songTitle.collectAsState()
-    val songSinger by playerViewModel.songSinger.collectAsState()
-    val songBitmap by playerViewModel.songBitmap.collectAsState()
-    val songIsLove by playerViewModel.songIsLove.collectAsState()
+//    val songTitle by playerViewModel.songTitle.collectAsState()
+//    val songSinger by playerViewModel.songSinger.collectAsState()
+//    val songBitmap by playerViewModel.songCover.collectAsState()
+//    val songIsLove by playerViewModel.songIsLove.collectAsState()
+    val songValue by playerViewModel.songValue.collectAsState()
     val isPlaying by playerViewModel.isPlaying.collectAsState()
     LaunchedEffect(Unit) {
-        val bitmap = getStaticBitmap(context = context, songBitmap);
-        playerViewModel.updateColorsFromBitmap(bitmap)
+        playerViewModel.updateColorsFromSongCover()
     }
 
     AppleMusicBackground(
-        cover = songBitmap,
+        cover = songValue.cover,
         dominantColor = colors.firstOrNull() ?: Color.DarkGray,
         secondaryColor = colors.getOrNull(1) ?: Color.Black
     )
@@ -88,7 +89,11 @@ fun FullScreenPlayer(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
-                painter = painterResource(songBitmap),
+                painter = rememberAsyncImagePainter(
+                    model = songValue.cover,
+                    placeholder = painterResource(R.drawable.default_cover), // 加载中显示
+                    error = painterResource(R.drawable.default_cover)
+                ),
                 contentDescription = null,
                 modifier = Modifier
                     .size(300.dp)
@@ -106,13 +111,13 @@ fun FullScreenPlayer(
                     modifier = Modifier.weight(1f)
                 ) {
                     Text(
-                        songTitle,
+                        songValue.songTitle,
                         fontWeight = FontWeight.W600,
                         fontSize = 20.sp,
                         color = Color.White
                     )
                     Text(
-                        songSinger,
+                        songValue.singer,
                         fontWeight = FontWeight.W300,
                         fontSize = 20.sp,
                         color = Color.White
@@ -124,7 +129,7 @@ fun FullScreenPlayer(
                     Icon(
                         painter = painterResource(R.drawable.heart_solid_full),
                         contentDescription = null,
-                        tint = if (songIsLove)  Color(0xFFDC4C4C) else  Color.Unspecified
+                        tint = if (songValue.isLoved)  Color(0xFFDC4C4C) else  Color.Unspecified
                     )
                 }
                 IconButton(onClick = {}) {
@@ -167,14 +172,14 @@ fun FullScreenPlayer(
                             playerViewModel.pause()
                         }
                         else {
-                            val file = File(context.getExternalFilesDir("music"), "xiangnideye.mp3")
-                            playerViewModel.play(musicSource =
-                                MusicSource.Local(
-                                    id = 1,
-                                    path = file
-                                )
-
-                            )
+//                            val file = File(context.getExternalFilesDir("music"), "xiangnideye.mp3")
+//                            playerViewModel.play(musicSource =
+//                                MusicSource.Local(
+//                                    id = 1,
+//                                    path = file
+//                                )
+//                            )
+                            playerViewModel.resume()
                         }
                     },
                     modifier = Modifier.size(90.dp)

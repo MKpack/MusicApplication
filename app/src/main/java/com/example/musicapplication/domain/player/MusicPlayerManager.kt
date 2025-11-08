@@ -97,7 +97,7 @@ class MusicPlayerManager(context: Context) {
                     newUrl.toUri()
                 }
                 is MusicSource.Local -> {
-                    musicSource.path.toUri()
+                    musicSource.uri
                 }
             }
             withContext(Dispatchers.Main) {

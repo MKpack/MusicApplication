@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import coil.compose.rememberAsyncImagePainter
 import com.example.musicapplication.R
 import com.example.musicapplication.config.RouterConfig
 
@@ -45,8 +46,9 @@ fun MiniPlayer(
     playerViewModel: PlayerViewModel
 ) {
     val isPlaying = remember { mutableStateOf(true) }
-    val songTitle by playerViewModel.songTitle.collectAsState()
-    val songBitmap by playerViewModel.songBitmap.collectAsState()
+    val songValue by playerViewModel.songValue.collectAsState()
+//    val songTitle by playerViewModel.songTitle.collectAsState()
+//    val songCover by playerViewModel.songCover.collectAsState()
     Column(
         modifier = Modifier
             .clickable {
@@ -70,7 +72,11 @@ fun MiniPlayer(
             ) {
                 //封面
                 Image(
-                    painter = painterResource(songBitmap),
+                    painter = rememberAsyncImagePainter(
+                        model = songValue.cover,
+                        placeholder = painterResource(R.drawable.default_cover), // 加载中显示
+                        error = painterResource(R.drawable.default_cover)
+                    ),
                     contentDescription = null,
                     modifier = Modifier
                         .size(50.dp)
@@ -80,7 +86,7 @@ fun MiniPlayer(
                 Spacer(modifier = Modifier.width(12.dp))
                 //歌曲标题
                 Text(
-                    text = songTitle,
+                    text = songValue.songTitle,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     fontSize = 17.sp,

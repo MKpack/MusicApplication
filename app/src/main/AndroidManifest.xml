@@ -21,12 +21,37 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
+            android:launchMode="singleTask"
             android:theme="@style/Theme.MusicApplication"
             android:screenOrientation="portrait">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+
+            <!-- 下面的决定了可以由外部音频文件打开软件 -->
+            <intent-filter>
+                <!-- 表示这个 Activity 可以用来“查看”某个内容。-->
+                <action android:name="android.intent.action.VIEW" />
+                <!-- 表示 Activity 是普通可启动的目标。-->
+                <category android:name="android.intent.category.DEFAULT" />
+                <!--允许从浏览器或外部应用直接打开 App。-->
+                <category android:name="android.intent.category.BROWSABLE" />
+                <!-- 告诉系统：“我能处理以 file:// 开头的路径”。-->
+                <!-- 告诉系统：“我能处理以 content:// 开头的路径”。-->
+                <data android:scheme="file" />
+                <data android:scheme="content" />
+
+                <!-- 常见音频类型 -->
+                <data android:mimeType="audio/mpeg" />
+                <data android:mimeType="audio/mp4" />
+                <data android:mimeType="audio/aac" />
+                <data android:mimeType="audio/x-mpeg" />
+                <data android:mimeType="audio/x-m4a" />
+                <data android:mimeType="audio/ogg" />
+                <data android:mimeType="audio/wav" />
+                <data android:mimeType="audio/flac" />
+                <data android:mimeType="audio/*" />
             </intent-filter>
         </activity>
     </application>

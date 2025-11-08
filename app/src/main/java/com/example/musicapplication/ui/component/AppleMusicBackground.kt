@@ -13,10 +13,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
+import coil.compose.rememberAsyncImagePainter
+import com.example.musicapplication.R
 
 @Composable
 fun AppleMusicBackground(
-    cover: Int,
+    cover: String?,
     dominantColor: Color,
     secondaryColor: Color
 ) {
@@ -24,7 +26,11 @@ fun AppleMusicBackground(
 
         // 封面作为背景模糊放大
         Image(
-            painter = painterResource(cover),
+            painter = rememberAsyncImagePainter(
+                model = cover,
+                placeholder = painterResource(R.drawable.default_cover), // 加载中显示
+                error = painterResource(R.drawable.default_cover)        // 加载失败显示
+            ),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
