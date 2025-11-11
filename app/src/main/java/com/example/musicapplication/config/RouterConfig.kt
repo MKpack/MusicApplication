@@ -1,6 +1,8 @@
 package com.example.musicapplication.config
 
 object RouterConfig {
+
+    const val SPLASH = "splashScreen"
     //登陆
     const val LOGIN = "login"
     //首页

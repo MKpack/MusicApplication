@@ -47,6 +47,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.Dispatcher
+import okhttp3.Route
 
 @Composable
 fun LoginEntry(
@@ -67,7 +68,11 @@ fun LoginEntry(
     LaunchedEffect(loginStatus) {
         if (loginStatus == "success") {
             if (!RouterConfig.MAINPAGE.isEmpty()) {
-                navController.navigate(RouterConfig.MAINPAGE)
+                //bug 已经登陆成功返回还是可以到登陆页
+                navController.navigate(RouterConfig.MAINPAGE) {
+                    popUpTo(RouterConfig.LOGIN)  { inclusive = true }       //清除登陆页
+                    launchSingleTop = true              //避免重复创建mainPage
+                }
             }
             Toast.makeText(context, "登陆成功", Toast.LENGTH_SHORT).show()
             loginViewModel.changeLoginStatus()
