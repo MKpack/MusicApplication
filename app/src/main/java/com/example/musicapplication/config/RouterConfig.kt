@@ -13,4 +13,8 @@ object RouterConfig {
     const val PROFILE = "profile"
 
     const val PLAYER = "fullScreenPlayer"
+
+    const val RECOMMEND = "recommend"
+
+    const val LATEST = "latest"
 }

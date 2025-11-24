@@ -43,9 +43,9 @@ import com.example.musicapplication.config.RouterConfig
 fun MiniPlayer(
     navController: NavController,
     context: Context,
-    playerViewModel: PlayerViewModel
+    playerViewModel: PlayerViewModel,
 ) {
-    val isPlaying = remember { mutableStateOf(true) }
+    val isPlaying by playerViewModel.isPlaying.collectAsState()
     val songValue by playerViewModel.songValue.collectAsState()
 //    val songTitle by playerViewModel.songTitle.collectAsState()
 //    val songCover by playerViewModel.songCover.collectAsState()
@@ -94,11 +94,17 @@ fun MiniPlayer(
                     fontWeight = FontWeight.Medium
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                IconButton(onClick = { isPlaying.value = !isPlaying.value},
+                IconButton(onClick = {
+                    if (isPlaying) {
+                        playerViewModel.pause()
+                    } else {
+                        playerViewModel.resume()
+                    }
+                },
                     modifier = Modifier.size(30.dp)) {
                     Icon(
                         painter = painterResource(
-                            if (isPlaying.value)
+                            if (isPlaying)
                                 R.drawable.pause_icon
                             else
                                 R.drawable.play_icon

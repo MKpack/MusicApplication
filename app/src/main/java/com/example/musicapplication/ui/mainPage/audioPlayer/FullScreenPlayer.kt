@@ -181,6 +181,7 @@ fun FullScreenPlayer(
 //                            )
                             playerViewModel.resume()
                         }
+
                     },
                     modifier = Modifier.size(90.dp)
                         .clip(RoundedCornerShape(90.dp))
