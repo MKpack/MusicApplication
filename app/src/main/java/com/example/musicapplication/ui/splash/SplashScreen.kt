@@ -2,58 +2,128 @@ package com.example.musicapplication.ui.splash
 
 import com.example.musicapplication.R
 import android.content.Context
-import android.net.Uri
-import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.musicapplication.config.RouterConfig
-import com.example.musicapplication.data.remote.model.Song
+import com.example.musicapplication.ui.theme.MusicBgBottom
+import com.example.musicapplication.ui.theme.MusicBgTop
+import com.example.musicapplication.ui.theme.MusicPrimary
+import com.example.musicapplication.ui.theme.MusicPrimarySoft
+import com.example.musicapplication.ui.theme.MusicTextPrimary
+import com.example.musicapplication.ui.theme.MusicTextSecondary
 import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(
     navController: NavController,
-    context: Context,
-    externalSong: Pair<Song?, Uri?>?
 ) {
-    val TAG = "SplashScreen"
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0x0F805959)), // 品牌背景色
-        contentAlignment = Alignment.Center
-    ) {
-        Image(
-            painter = painterResource(id = R.drawable.default_cover),
-            contentDescription = null,
-            modifier = Modifier.size(120.dp)
-        )
-    }
+    val context = LocalContext.current
+
     LaunchedEffect(Unit) {
-        delay(600)
         val prefs = context.getSharedPreferences("token_prefs", Context.MODE_PRIVATE)
-        //如果有登陆状态则直接splash->mainPage,无则splash->login
-        if (prefs.getString("access_token", null) != null
-            || prefs.getString("refresh_token", null) != null) {
+        delay(800)
+        withFrameNanos { }
+        val hasLoginState = prefs.getString("access_token", null) != null ||
+            prefs.getString("refresh_token", null) != null
+
+        if (hasLoginState) {
             navController.navigate(RouterConfig.MAINPAGE) {
                 popUpTo(RouterConfig.SPLASH) { inclusive = true}
             }
         } else {
-            //无登陆状态,先登陆
             navController.navigate(RouterConfig.LOGIN) {
                 popUpTo(RouterConfig.SPLASH) { inclusive = true}
             }
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        MusicBgTop,
+                        MusicBgBottom
+                    )
+                )
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(88.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(MusicPrimary),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_splash_music),
+                    contentDescription = "Music App",
+                    modifier = Modifier.size(54.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            Text(
+                text = "Music App",
+                color = MusicTextPrimary,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Feel the music, your way",
+                color = MusicTextSecondary,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            Spacer(modifier = Modifier.height(44.dp))
+
+//            CircularProgressIndicator(
+//                modifier = Modifier.size(26.dp),
+//                color = Color(0xFFFF5148),
+//                strokeWidth = 2.5.dp
+//            )
+            LinearProgressIndicator(
+                modifier = Modifier
+                    .width(120.dp)
+                    .height(3.dp)
+                    .clip(RoundedCornerShape(999.dp)),
+                color = MusicPrimary,
+                trackColor = MusicPrimarySoft
+            )
         }
     }
 }

@@ -10,6 +10,10 @@ android {
     namespace = "com.example.musicapplication"
     compileSdk = 36
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "com.example.musicapplication"
         minSdk = 31
@@ -17,6 +21,8 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+//        buildConfigField("String", "BASE_URL", "\"http://192.168.134.221:8080\"")
+        buildConfigField("String", "BASE_URL", "\"http://192.168.3.75:8080\"")
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -42,6 +48,16 @@ android {
 }
 
 dependencies {
+    // room
+    ksp("androidx.room:room-compiler:2.7.2")
+    implementation("androidx.room:room-runtime:2.7.2")
+    implementation("androidx.room:room-ktx:2.7.2")
+    // 拖拽排序
+    implementation("sh.calvin.reorderable:reorderable:2.5.1")
+    // dataStore
+    implementation("androidx.datastore:datastore-preferences:1.2.1")
+    // 裁剪
+    implementation("com.vanniktech:android-image-cropper:4.7.0")
     //核心ExoPlayer（必须）
     implementation("androidx.media3:media3-exoplayer:1.8.0")
     //UI控件（可选，比如 PlayerView）

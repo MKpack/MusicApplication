@@ -25,6 +25,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.musicapplication.ui.theme.MusicBorder
+import com.example.musicapplication.ui.theme.MusicField
+import com.example.musicapplication.ui.theme.MusicPrimary
+import com.example.musicapplication.ui.theme.MusicTextHint
 
 @Composable
 fun NewTextField(
@@ -36,7 +40,7 @@ fun NewTextField(
         value = text,
         onValueChange = onValueChange,
         singleLine = true,
-        cursorBrush = SolidColor(Color(0xFF1E88E5)),
+        cursorBrush = SolidColor(MusicPrimary),
         textStyle = TextStyle(
             fontSize = 18.sp,
         ),
@@ -47,11 +51,11 @@ fun NewTextField(
                     .height(50.dp)
                     .border(
                         width = 2.dp,
-                        color = Color(0xFFDFE5E5),
+                        color = MusicBorder,
                         shape = RoundedCornerShape(6.dp)
                     )
                     .background(
-                        color = Color(0xFFDCDCDC),
+                        color = MusicField,
                         shape = RoundedCornerShape(6.dp)
                     )
                     .padding(10.dp),
@@ -62,7 +66,7 @@ fun NewTextField(
                     Text(
                         text = hint,
                         fontSize = 16.sp,
-                        color = Color(0xFF9E9E9E)
+                        color = MusicTextHint
                     )
                 }
                 innerField()

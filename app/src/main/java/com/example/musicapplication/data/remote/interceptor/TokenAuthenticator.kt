@@ -1,11 +1,15 @@
 package com.example.musicapplication.data.remote.interceptor
 
 import android.content.Context
+import android.content.SharedPreferences
 import android.util.Log
 import androidx.core.content.edit
-import com.example.musicapplication.data.remote.api.RefreshTokenApi
-import com.example.musicapplication.data.remote.dto.ApiResponse
-import com.example.musicapplication.data.remote.dto.TokenDto
+import com.example.musicapplication.data.local.token.TokenStore
+import com.example.musicapplication.data.remote.api.AuthApi
+import com.example.musicapplication.data.remote.api.TokenApi
+import com.example.musicapplication.data.remote.dto.response.ApiResponse
+import com.example.musicapplication.data.remote.dto.request.RefreshTokenRequest
+import com.example.musicapplication.data.session.SessionManager
 import okhttp3.Authenticator
 import okhttp3.Request
 import okhttp3.Response
@@ -17,65 +21,62 @@ import java.util.concurrent.CompletableFuture
  * 问题：如果多个线程同时访问会多次刷新access（已解决）重复刷新我没有能力避免。
  */
 class TokenAuthenticator(
-    private val context: Context,
-    private val refreshTokenApi: RefreshTokenApi
+    private val tokenStore: TokenStore,
+    private val tokenApi: TokenApi,
+    private val sessionManager: SessionManager
 ) : Authenticator {
     private val TAG = "TokenAuthenticator"
-    //静态资源
-    companion object {
-        //静态变量，全局共享的刷新任务
-        @Volatile
-        private var ongoingRefresh: CompletableFuture<ApiResponse<String>>? = null
-    }
+    private val lock = Any()
+
+
     override fun authenticate(route: Route?, response: Response): Request? {
 
-        val prefs = context.getSharedPreferences("token_prefs", Context.MODE_PRIVATE)
-        val refreshToken: String? = prefs.getString("refresh_token", null)
+        if (response.request.header("Already-Retried") == "true") {
+            sessionManager.onSessionExpired()
+            return null
+        }
 
-        //如果已经存在一个线程在更新了那么其他线程等待其完成
-        val existingJob = ongoingRefresh
-        if (existingJob != null) {
-            val result = existingJob.get()      //阻塞等待结果
-            Log.d(TAG, "existing:$result")
-            return result.let {
-                response.request.newBuilder()
-                    .header("Authorization", "Bearer ${it.data}")
+        return synchronized(lock) {
+            val requestToken = response.request.header("Authorization")
+            val latestAccessToken = tokenStore.getAccessToken()
+
+            if (!latestAccessToken.isNullOrBlank() &&
+                requestToken != "Bearer $latestAccessToken") {
+                // return@synchronized 只从 synchronized 这个代码块返回，不是从整个函数返回
+                return@synchronized response.request.newBuilder()
+                    .header("Authorization", "Bearer $latestAccessToken")
                     .header("Already-Retried", "true")
                     .build()
             }
-        }
-        //如果还没有线程更新，就更新
-        val newJob = CompletableFuture<ApiResponse<String>>()
-        ongoingRefresh = newJob
-        try {
+            val refreshToken = tokenStore.getRefreshToken()
+
+            if (refreshToken.isNullOrBlank()) {
+                sessionManager.onSessionExpired()
+                return@synchronized null
+            }
+
             val newToken = try {
-                val call = refreshTokenApi.getRefreshedAccessToken(TokenDto(refreshToken))
-                val res = call.execute()
-                if (res.isSuccessful) res.body()
-                else null
-            }catch (e: Exception) {
+                val res = tokenApi.getRefreshedAccessToken(RefreshTokenRequest(refreshToken))
+                    .execute()
+                if (res.isSuccessful) {
+                    res.body()
+                } else {
+                    null
+                }
+            } catch (e: Exception) {
                 null
             }
-            if (newToken == null)   return null;
-            if (!newToken.success){
-                Log.d(TAG, newToken.message)
-                return null
-            }
-            Log.d(TAG, "newJob:$newToken")
-            //更新本地缓存
-            prefs.edit {
-                putString("access_token", newToken.data)
-            }
-            //通知所有等待的线程
-            newJob.complete(newToken)
 
-            return response.request.newBuilder()
+            if (newToken?.code != 200 || newToken.data.isNullOrBlank()) {
+                sessionManager.onSessionExpired()
+                return@synchronized null
+            }
+            tokenStore.updateAccessToken(newToken.data)
+
+            response.request.newBuilder()
                 .header("Authorization", "Bearer ${newToken.data}")
                 .header("Already-Retried", "true")
                 .build()
-        }
-        finally {
-            ongoingRefresh = null
         }
     }
 }

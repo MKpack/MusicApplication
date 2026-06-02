@@ -3,13 +3,12 @@ package com.example.musicapplication.ui.login
 import android.util.Patterns
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.compose.rememberNavController
-import com.example.musicapplication.data.repository.LoginRepositoryImpi
+import com.example.musicapplication.data.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlin.text.isEmpty
 
@@ -19,7 +18,7 @@ enum class LoginMode {ACCOUNT, REGISTER, FORGET}
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val loginRepositoryImpi: LoginRepositoryImpi
+    private val loginRepositoryImpi: AuthRepository
 ) : ViewModel() {
     //登陆状态
     //登陆：标识是否登陆成功以及失败
@@ -46,12 +45,17 @@ class LoginViewModel @Inject constructor(
     private val _authCode = MutableStateFlow("")
     val authCode: StateFlow<String> = _authCode
 
-    private var message = ""
+    private val _message = MutableStateFlow<String?>(null)
+    val message = _message.asStateFlow()
+
+    fun consumeMessage() {
+        _message.value = null
+    }
 
     //login网络请求
     fun login() {
         //开发阶段测试
-        if (_email.value == "root" && _password.value == "1") {
+        if (_email.value == "root1" && _password.value == "1") {
             _loginStatus.value = "success"
             return
         }
@@ -67,11 +71,11 @@ class LoginViewModel @Inject constructor(
     fun sendCode() {
         viewModelScope.launch {
             val msg = loginRepositoryImpi.getAuthCode(_email.value)
-            message = msg
+            _message.value = msg
         }
     }
 
-    fun register(): String {
+    fun register() {
         viewModelScope.launch {
             val msg = loginRepositoryImpi.register(
                 _email.value, _authCode.value, _password.value, _passwordAgain.value
@@ -81,9 +85,8 @@ class LoginViewModel @Inject constructor(
                 clearAllValue()
             }
 
-            message = msg
+            _message.value = msg
         }
-        return message
     }
 
     fun reset() {

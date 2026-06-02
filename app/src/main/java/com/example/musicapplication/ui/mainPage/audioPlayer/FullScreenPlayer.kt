@@ -13,6 +13,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.indication
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -52,15 +53,18 @@ import com.example.musicapplication.ui.component.MusicProgressBar
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.File
 
+/**
+ * 已弃用
+ */
 fun getStaticBitmap(context: Context, resId: Int): Bitmap {
     val drawable = context.getDrawable(resId) as BitmapDrawable
     return drawable.bitmap
 }
 @Composable
 fun FullScreenPlayer(
-    navController: NavController,
     context: Context,
     playerViewModel: PlayerViewModel,
+    modifier: Modifier = Modifier
 ) {
     val colors by playerViewModel.dominantColors.collectAsState()
 //    val songTitle by playerViewModel.songTitle.collectAsState()
@@ -73,105 +77,108 @@ fun FullScreenPlayer(
         playerViewModel.updateColorsFromSongCover()
     }
 
-    AppleMusicBackground(
-        cover = songValue.cover,
-        dominantColor = colors.firstOrNull() ?: Color.DarkGray,
-        secondaryColor = colors.getOrNull(1) ?: Color.Black
-    )
-    Column(
-        modifier = Modifier.fillMaxSize()
+    Box(
+        modifier = modifier.fillMaxSize()
     ) {
+        AppleMusicBackground(
+            cover = songValue.cover,
+            dominantColor = colors.firstOrNull() ?: Color.DarkGray,
+            secondaryColor = colors.getOrNull(1) ?: Color.Black
+        )
         Column(
-            modifier = Modifier.fillMaxWidth()
-                .padding(horizontal = 20.dp)
-                .padding(top = 150.dp),
-            verticalArrangement = Arrangement.Top,
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier.fillMaxSize()
         ) {
-            Image(
-                painter = rememberAsyncImagePainter(
-                    model = songValue.cover,
-                    placeholder = painterResource(R.drawable.default_cover), // 加载中显示
-                    error = painterResource(R.drawable.default_cover)
-                ),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(300.dp)
-                    .clip(RoundedCornerShape(16.dp)),
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 80.dp)
-                    .padding(horizontal = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start
+            Column(
+                modifier = Modifier.fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 150.dp),
+                verticalArrangement = Arrangement.Top,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(
-                    modifier = Modifier.weight(1f)
+                Image(
+                    painter = rememberAsyncImagePainter(
+                        model = songValue.cover,
+                        placeholder = painterResource(R.drawable.default_cover), // 加载中显示
+                        error = painterResource(R.drawable.default_cover)
+                    ),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(300.dp)
+                        .clip(RoundedCornerShape(16.dp)),
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 80.dp)
+                        .padding(horizontal = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
                 ) {
-                    Text(
-                        songValue.songTitle,
-                        fontWeight = FontWeight.W600,
-                        fontSize = 20.sp,
-                        color = Color.White
-                    )
-                    Text(
-                        songValue.singer,
-                        fontWeight = FontWeight.W300,
-                        fontSize = 20.sp,
-                        color = Color.White
-                    )
-                }
-                IconButton(onClick = {
-                    playerViewModel.updateLoveStatus()
-                }) {
-                    Icon(
-                        painter = painterResource(R.drawable.heart_solid_full),
-                        contentDescription = null,
-                        tint = if (songValue.isLoved)  Color(0xFFDC4C4C) else  Color.Unspecified
-                    )
-                }
-                IconButton(onClick = {}) {
-                    Icon(
-                        painter = painterResource(R.drawable.ellipsis_vertical_solid_full),
-                        contentDescription = null,
-                        tint = Color.Unspecified
-                    )
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            songValue.songTitle,
+                            fontWeight = FontWeight.W600,
+                            fontSize = 20.sp,
+                            color = Color.White
+                        )
+                        Text(
+                            songValue.singer,
+                            fontWeight = FontWeight.W300,
+                            fontSize = 20.sp,
+                            color = Color.White
+                        )
+                    }
+                    IconButton(onClick = {
+                        playerViewModel.updateLoveStatus()
+                    }) {
+                        Icon(
+                            painter = painterResource(R.drawable.heart_solid_full),
+                            contentDescription = null,
+                            tint = if (songValue.isLoved)  Color(0xFFDC4C4C) else  Color.Unspecified
+                        )
+                    }
+                    IconButton(onClick = {}) {
+                        Icon(
+                            painter = painterResource(R.drawable.ellipsis_vertical_solid_full),
+                            contentDescription = null,
+                            tint = Color.Unspecified
+                        )
+                    }
                 }
             }
-        }
-        Column(
-            modifier = Modifier.fillMaxWidth()
-                .padding(top = 25.dp)
-                .padding(horizontal = 30.dp),
-        ) {
-//            MusicProgressBar(currentProgress, onSeek = { playerViewModel.onSeek(it) })
-            MusicProgressBar2(playerViewModel)
-            Row(
+            Column(
                 modifier = Modifier.fillMaxWidth()
-                    .padding(top = 40.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                    .padding(top = 25.dp)
+                    .padding(horizontal = 30.dp),
             ) {
-                IconButton(
-                    onClick = {},
-                    modifier = Modifier.size(90.dp)
-                        .clip(RoundedCornerShape(90.dp))
+//            MusicProgressBar(currentProgress, onSeek = { playerViewModel.onSeek(it) })
+                PlayerProgressBar(playerViewModel)
+                Row(
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(top = 40.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Icon(
-                        painter = painterResource(R.drawable.backward_solid_full),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(50.dp),
-                        tint = Color.White
-                    )
-                }
-                IconButton(
-                    onClick = {
-                        if (isPlaying) {
-                            playerViewModel.pause()
-                        }
-                        else {
+                    IconButton(
+                        onClick = {},
+                        modifier = Modifier.size(90.dp)
+                            .clip(RoundedCornerShape(90.dp))
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.backward_solid_full),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(50.dp),
+                            tint = Color.White
+                        )
+                    }
+                    IconButton(
+                        onClick = {
+                            if (isPlaying) {
+                                playerViewModel.pause()
+                            }
+                            else {
 //                            val file = File(context.getExternalFilesDir("music"), "xiangnideye.mp3")
 //                            playerViewModel.play(musicSource =
 //                                MusicSource.Local(
@@ -179,59 +186,60 @@ fun FullScreenPlayer(
 //                                    path = file
 //                                )
 //                            )
-                            playerViewModel.resume()
-                        }
+                                playerViewModel.resume()
+                            }
 
-                    },
-                    modifier = Modifier.size(90.dp)
-                        .clip(RoundedCornerShape(90.dp))
-                ) {
-                    Icon(
-                        painter = painterResource(if (isPlaying)  R.drawable.pause_icon else  R.drawable.play_icon),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(60.dp),
-                        tint = Color.White
-                    )
+                        },
+                        modifier = Modifier.size(90.dp)
+                            .clip(RoundedCornerShape(90.dp))
+                    ) {
+                        Icon(
+                            painter = painterResource(if (isPlaying)  R.drawable.pause_icon else  R.drawable.play_icon),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(60.dp),
+                            tint = Color.White
+                        )
+                    }
+                    IconButton(
+                        onClick = {
+                        },
+                        modifier = Modifier.size(90.dp)
+                            .clip(RoundedCornerShape(90.dp))
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.forward_solid_full),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(50.dp),
+                            tint = Color.White
+                        )
+                    }
                 }
-                IconButton(
-                    onClick = {
-                    },
-                    modifier = Modifier.size(90.dp)
-                        .clip(RoundedCornerShape(90.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 30.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Icon(
-                        painter = painterResource(R.drawable.forward_solid_full),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(50.dp),
-                        tint = Color.White
-                    )
-                }
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 30.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                IconButton(
-                    onClick = {}
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.words_of_song),
-                        contentDescription = null,
-                        tint = Color.White
-                    )
-                }
-                IconButton(
-                    onClick = {}
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.list_ul_solid_full),
-                        contentDescription = null,
-                        tint = Color.White
-                    )
+                    IconButton(
+                        onClick = {}
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.words_of_song),
+                            contentDescription = null,
+                            tint = Color.White
+                        )
+                    }
+                    IconButton(
+                        onClick = {}
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.list_ul_solid_full),
+                            contentDescription = null,
+                            tint = Color.White
+                        )
+                    }
                 }
             }
         }

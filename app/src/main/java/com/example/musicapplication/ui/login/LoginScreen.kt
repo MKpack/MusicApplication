@@ -5,7 +5,9 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,6 +31,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +48,14 @@ import com.example.musicapplication.ui.component.ButtonRightTextField
 import com.example.musicapplication.ui.component.NewTextField
 import com.example.musicapplication.ui.component.NoRippleTextButton
 import com.example.musicapplication.ui.component.PasswordTextField
+import com.example.musicapplication.ui.theme.MusicBgBottom
+import com.example.musicapplication.ui.theme.MusicBgTop
+import com.example.musicapplication.ui.theme.MusicBorder
+import com.example.musicapplication.ui.theme.MusicDisabledContainer
+import com.example.musicapplication.ui.theme.MusicDisabledContent
+import com.example.musicapplication.ui.theme.MusicPrimary
+import com.example.musicapplication.ui.theme.MusicTextPrimary
+import com.example.musicapplication.ui.theme.MusicTextSecondary
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -64,6 +77,13 @@ fun LoginEntry(
         loginViewModel.changeMode(LoginMode.ACCOUNT)
     }
 
+    val message by loginViewModel.message.collectAsState()
+
+    LaunchedEffect(message) {
+        val value = message ?: return@LaunchedEffect
+        Toast.makeText(context, value, Toast.LENGTH_SHORT).show()
+        loginViewModel.consumeMessage()
+    }
     //副作用
     LaunchedEffect(loginStatus) {
         if (loginStatus == "success") {
@@ -79,54 +99,111 @@ fun LoginEntry(
         }
     }
 
-    Column (
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .systemBarsPadding(),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        MusicBgTop,
+                        MusicBgBottom
+                    )
+                )
+            )
+            .systemBarsPadding()
     ) {
-        Image(
-            painter = painterResource(R.drawable.music_image),
-            contentDescription = "icon",
-            modifier = Modifier.padding(top = 54.dp, bottom = 16.dp)
-                .width(60.dp)
-                .height(60.dp)
-        )
-        Text(
-            text = "Music App",
-            modifier = Modifier.padding(bottom = 95.dp)
-                .fillMaxWidth()
-                .height(50.dp),
-            textAlign = TextAlign.Center,
-            fontSize = 30.sp,
-            fontWeight = FontWeight.Medium,
-        )
-
-        when (mode) {
-            LoginMode.ACCOUNT -> AccountForm(loginViewModel = loginViewModel)
-            LoginMode.REGISTER -> RegisterForm(loginViewModel = loginViewModel, context)
-            LoginMode.FORGET -> ForgetForm(loginViewModel = loginViewModel, context)
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(0.8f).padding(top = 180.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Column (
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            HorizontalDivider(
-                color = Color.Black,
-                thickness = 1.dp,
-                modifier = Modifier.width(100.dp)
-            )
-            Text("其他登陆方式",
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(start = 10.dp, end = 10.dp)
-            )
-            HorizontalDivider(
-                color = Color.Black,
-                thickness = 1.dp,
-                modifier = Modifier.width(100.dp)
-            )
-        }
+            Spacer(modifier = Modifier.height(56.dp))
 
+            Box(
+                modifier = Modifier
+                    .size(82.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(MusicPrimary),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.ic_splash_music),
+                    contentDescription = "Music App",
+                    modifier = Modifier.size(52.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+//            Text(
+//                text = "Music App",
+//                modifier = Modifier.padding(bottom = 95.dp)
+//                    .fillMaxWidth()
+//                    .height(50.dp),
+//                textAlign = TextAlign.Center,
+//                fontSize = 30.sp,
+//                fontWeight = FontWeight.Medium,
+//            )
+
+            Text(
+                text = when (mode) {
+                    LoginMode.ACCOUNT -> "欢迎回来"
+                    LoginMode.REGISTER -> "创建账号"
+                    LoginMode.FORGET -> "找回密码"
+                },
+                color = MusicTextPrimary,
+                fontSize = 30.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = when (mode) {
+                    LoginMode.ACCOUNT -> "登录后继续收藏你的音乐"
+                    LoginMode.REGISTER -> "注册后开始创建自己的歌单"
+                    LoginMode.FORGET -> "验证邮箱后重设登录密码"
+                },
+                color = MusicTextSecondary,
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(42.dp))
+
+            when (mode) {
+                LoginMode.ACCOUNT -> AccountForm(loginViewModel = loginViewModel)
+                LoginMode.REGISTER -> RegisterForm(loginViewModel = loginViewModel, context)
+                LoginMode.FORGET -> ForgetForm(loginViewModel = loginViewModel, context)
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            if (mode == LoginMode.ACCOUNT) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(0.86f).padding(bottom = 36.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    HorizontalDivider(
+                        color = MusicBorder,
+                        thickness = 1.dp,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text("其他登陆方式",
+                        color = MusicTextSecondary,
+                        fontSize = 12.sp,
+                        modifier = Modifier.padding(horizontal = 12.dp)
+                    )
+                    HorizontalDivider(
+                        color = MusicBorder,
+                        thickness = 1.dp,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -169,12 +246,15 @@ fun AccountForm(loginViewModel: LoginViewModel) {
                 .fillMaxWidth(0.8f)
                 .height(45.dp),
             colors = ButtonDefaults.buttonColors(
-                Color(0xFF383125)
+                containerColor = MusicPrimary,
+                contentColor = Color.White,
+                disabledContainerColor = MusicDisabledContainer,
+                disabledContentColor = MusicDisabledContent
             ),
-            shape = RoundedCornerShape(10.dp)
+            shape = RoundedCornerShape(14.dp)
         ) {
             Text(
-                "登陆",
+                "登录",
             )
         }
         Spacer(modifier = Modifier.height(10.dp))
@@ -242,15 +322,18 @@ fun RegisterForm(loginViewModel: LoginViewModel, context: Context) {
         }
         Spacer(modifier = Modifier.height(10.dp))
         Button(
-            onClick = { val msg = loginViewModel.register() },
+            onClick = { loginViewModel.register() },
             enabled = loginViewModel.ifCanRegister(),
             modifier = Modifier
                 .fillMaxWidth(0.8f)
                 .height(45.dp),
             colors = ButtonDefaults.buttonColors(
-                Color(0xFF383125)
+                containerColor = MusicPrimary,
+                contentColor = Color.White,
+                disabledContainerColor = MusicDisabledContainer,
+                disabledContentColor = MusicDisabledContent
             ),
-            shape = RoundedCornerShape(10.dp)
+            shape = RoundedCornerShape(14.dp)
         ) {
             Text("注册")
         }
@@ -260,7 +343,7 @@ fun RegisterForm(loginViewModel: LoginViewModel, context: Context) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            NoRippleTextButton("已经有账号，去登陆", ) {
+            NoRippleTextButton("已经有账号，去登录", ) {
                 loginViewModel.changeMode(LoginMode.ACCOUNT)
             }
         }
@@ -290,9 +373,12 @@ fun ForgetForm(loginViewModel: LoginViewModel, context: Context) {
                 .fillMaxWidth(0.8f)
                 .height(45.dp),
             colors = ButtonDefaults.buttonColors(
-                Color(0xFF383125)
+                containerColor = MusicPrimary,
+                contentColor = Color.White,
+                disabledContainerColor = MusicDisabledContainer,
+                disabledContentColor = MusicDisabledContent
             ),
-            shape = RoundedCornerShape(10.dp)
+            shape = RoundedCornerShape(14.dp)
         ) {
             Text("重置密码")
         }
@@ -302,7 +388,7 @@ fun ForgetForm(loginViewModel: LoginViewModel, context: Context) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            NoRippleTextButton("想起密码了，去登陆", ) {
+            NoRippleTextButton("想起密码了，去登录", ) {
                 loginViewModel.changeMode(LoginMode.ACCOUNT)
             }
         }

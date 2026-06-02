@@ -41,6 +41,10 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.musicapplication.ui.theme.MusicBorder
+import com.example.musicapplication.ui.theme.MusicField
+import com.example.musicapplication.ui.theme.MusicPrimary
+import com.example.musicapplication.ui.theme.MusicTextHint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.w3c.dom.Text
@@ -64,11 +68,11 @@ fun ButtonRightTextField(
                     .height(50.dp)
                     .border(
                         width = 2.dp,
-                        color = Color(0xFFDFE5E5),
+                        color = MusicBorder,
                         shape = RoundedCornerShape(6.dp)
                     )
                     .background(
-                        color = Color(0xFFDCDCDC),
+                        color = MusicField,
                         shape = RoundedCornerShape(6.dp)
                     )
                     .padding(start = 10.dp, end = 10.dp),
@@ -82,7 +86,7 @@ fun ButtonRightTextField(
                         Text(
                             text = hint,
                             fontSize = 16.sp,
-                            color = Color(0xFF9E9E9E)
+                            color = MusicTextHint
                         )
                     }
                     innerField()
@@ -109,7 +113,7 @@ fun ButtonRightTextField(
                 ) {
                     BasicText(
                         text = btnText,
-                        style = TextStyle(color = Color.Black)
+                        style = TextStyle(color = MusicPrimary)
                     )
                 }
             }

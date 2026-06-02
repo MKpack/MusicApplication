@@ -3,7 +3,7 @@ package com.example.musicapplication.ui.appNaviagtion
 import android.net.Uri
 import android.util.Log
 import androidx.lifecycle.ViewModel
-import com.example.musicapplication.data.remote.model.Song
+import com.example.musicapplication.domain.model.Song
 import dagger.hilt.android.lifecycle.HiltViewModel
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow

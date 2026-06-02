@@ -26,7 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.musicapplication.data.remote.model.Song
+import com.example.musicapplication.domain.model.Song
 import org.w3c.dom.Text
 
 @Composable
@@ -75,6 +75,6 @@ fun SongSelectItem(
 @Composable
 fun showSongSelectItem() {
     Column {
-        SongSelectItem(Song(0, "想你的夜", "关喆", true, "uri"))
+        SongSelectItem(Song(0, "想你的夜", "关喆", true, "uri", null))
     }
 }
