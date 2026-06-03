@@ -29,12 +29,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.example.musicapplication.config.RouterConfig
-import com.example.musicapplication.ui.theme.MusicBgBottom
-import com.example.musicapplication.ui.theme.MusicBgTop
-import com.example.musicapplication.ui.theme.MusicPrimary
-import com.example.musicapplication.ui.theme.MusicPrimarySoft
-import com.example.musicapplication.ui.theme.MusicTextPrimary
-import com.example.musicapplication.ui.theme.MusicTextSecondary
+import com.example.musicapplication.ui.theme.LocalMusicThemeColors
+
 import kotlinx.coroutines.delay
 
 @Composable
@@ -67,8 +63,8 @@ fun SplashScreen(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        MusicBgTop,
-                        MusicBgBottom
+                        LocalMusicThemeColors.current.bgTop,
+                        LocalMusicThemeColors.current.bgBottom
                     )
                 )
             ),
@@ -82,7 +78,7 @@ fun SplashScreen(
                 modifier = Modifier
                     .size(88.dp)
                     .clip(RoundedCornerShape(22.dp))
-                    .background(MusicPrimary),
+                    .background(LocalMusicThemeColors.current.primary),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
@@ -96,7 +92,7 @@ fun SplashScreen(
 
             Text(
                 text = "Music App",
-                color = MusicTextPrimary,
+                color = LocalMusicThemeColors.current.textPrimary,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold
             )
@@ -105,7 +101,7 @@ fun SplashScreen(
 
             Text(
                 text = "Feel the music, your way",
-                color = MusicTextSecondary,
+                color = LocalMusicThemeColors.current.textSecondary,
                 style = MaterialTheme.typography.bodyMedium
             )
 
@@ -121,8 +117,8 @@ fun SplashScreen(
                     .width(120.dp)
                     .height(3.dp)
                     .clip(RoundedCornerShape(999.dp)),
-                color = MusicPrimary,
-                trackColor = MusicPrimarySoft
+                color = LocalMusicThemeColors.current.primary,
+                trackColor = LocalMusicThemeColors.current.primarySoft
             )
         }
     }

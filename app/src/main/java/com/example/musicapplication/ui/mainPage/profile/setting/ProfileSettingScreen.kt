@@ -46,16 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.musicapplication.ui.theme.MusicBgBottom
-import com.example.musicapplication.ui.theme.MusicBgTop
-import com.example.musicapplication.ui.theme.MusicBorder
-import com.example.musicapplication.ui.theme.MusicDivider
-import com.example.musicapplication.ui.theme.MusicIconMuted
-import com.example.musicapplication.ui.theme.MusicPrimary
-import com.example.musicapplication.ui.theme.MusicPrimarySoft
-import com.example.musicapplication.ui.theme.MusicSurface
-import com.example.musicapplication.ui.theme.MusicTextPrimary
-import com.example.musicapplication.ui.theme.MusicTextSecondary
+import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 
 @Composable
 fun ProfileSettingScreen(
@@ -71,7 +62,10 @@ fun ProfileSettingScreen(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(MusicBgTop, MusicBgBottom)
+                    colors = listOf(
+                        LocalMusicThemeColors.current.bgTop,
+                        LocalMusicThemeColors.current.bgBottom
+                    )
                 )
             ),
         contentPadding = PaddingValues(
@@ -164,14 +158,14 @@ private fun SettingTopBar(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = null,
-                tint = MusicTextPrimary,
+                tint = LocalMusicThemeColors.current.textPrimary,
                 modifier = Modifier.size(25.dp)
             )
         }
 
         Text(
             text = "设置",
-            color = MusicTextPrimary,
+            color = LocalMusicThemeColors.current.textPrimary,
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 4.dp)
@@ -208,7 +202,7 @@ private fun SettingGroup(
     Column {
         Text(
             text = title,
-            color = MusicTextSecondary,
+            color = LocalMusicThemeColors.current.textSecondary,
             fontSize = 13.sp,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
@@ -218,8 +212,8 @@ private fun SettingGroup(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(22.dp))
-                .background(MusicSurface)
-                .border(1.dp, MusicBorder, RoundedCornerShape(22.dp))
+                .background(LocalMusicThemeColors.current.surface)
+                .border(1.dp, LocalMusicThemeColors.current.border, RoundedCornerShape(22.dp))
                 .padding(vertical = 6.dp)
         ) {
             items.forEachIndexed { index, item ->
@@ -227,7 +221,7 @@ private fun SettingGroup(
                 if (index != items.lastIndex) {
                     HorizontalDivider(
                         modifier = Modifier.padding(start = 58.dp),
-                        color = MusicDivider,
+                        color = LocalMusicThemeColors.current.divider,
                         thickness = 1.dp
                     )
                 }
@@ -258,13 +252,13 @@ private fun SettingRow(
             modifier = Modifier
                 .size(34.dp)
                 .clip(CircleShape)
-                .background(MusicPrimarySoft),
+                .background(LocalMusicThemeColors.current.primarySoft),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = item.icon,
                 contentDescription = null,
-                tint = MusicPrimary,
+                tint = LocalMusicThemeColors.current.primary,
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -276,7 +270,7 @@ private fun SettingRow(
         ) {
             Text(
                 text = item.title,
-                color = MusicTextPrimary,
+                color = LocalMusicThemeColors.current.textPrimary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -287,7 +281,7 @@ private fun SettingRow(
 
             Text(
                 text = item.subtitle,
-                color = MusicTextSecondary,
+                color = LocalMusicThemeColors.current.textSecondary,
                 fontSize = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -306,7 +300,7 @@ private fun SettingRow(
                 Icon(
                     imageVector = Icons.Default.Settings,
                     contentDescription = null,
-                    tint = MusicIconMuted,
+                    tint = LocalMusicThemeColors.current.iconMuted,
                     modifier = Modifier.size(18.dp)
                 )
             }

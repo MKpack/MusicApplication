@@ -1,7 +1,6 @@
 package com.example.musicapplication.ui.login
 
 import android.content.Context
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
@@ -17,13 +16,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Snackbar
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -39,28 +35,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.musicapplication.R
 import com.example.musicapplication.config.RouterConfig
 import com.example.musicapplication.ui.component.ButtonRightTextField
 import com.example.musicapplication.ui.component.NewTextField
 import com.example.musicapplication.ui.component.NoRippleTextButton
 import com.example.musicapplication.ui.component.PasswordTextField
-import com.example.musicapplication.ui.theme.MusicBgBottom
-import com.example.musicapplication.ui.theme.MusicBgTop
-import com.example.musicapplication.ui.theme.MusicBorder
-import com.example.musicapplication.ui.theme.MusicDisabledContainer
-import com.example.musicapplication.ui.theme.MusicDisabledContent
-import com.example.musicapplication.ui.theme.MusicPrimary
-import com.example.musicapplication.ui.theme.MusicTextPrimary
-import com.example.musicapplication.ui.theme.MusicTextSecondary
-import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import okhttp3.Dispatcher
-import okhttp3.Route
+import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 
 @Composable
 fun LoginEntry(
@@ -105,8 +87,8 @@ fun LoginEntry(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        MusicBgTop,
-                        MusicBgBottom
+                        LocalMusicThemeColors.current.bgTop,
+                        LocalMusicThemeColors.current.bgBottom
                     )
                 )
             )
@@ -124,7 +106,7 @@ fun LoginEntry(
                 modifier = Modifier
                     .size(82.dp)
                     .clip(RoundedCornerShape(22.dp))
-                    .background(MusicPrimary),
+                    .background(LocalMusicThemeColors.current.primary),
                 contentAlignment = Alignment.Center
             ) {
                 Image(
@@ -152,7 +134,7 @@ fun LoginEntry(
                     LoginMode.REGISTER -> "创建账号"
                     LoginMode.FORGET -> "找回密码"
                 },
-                color = MusicTextPrimary,
+                color = LocalMusicThemeColors.current.textPrimary,
                 fontSize = 30.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center
@@ -166,7 +148,7 @@ fun LoginEntry(
                     LoginMode.REGISTER -> "注册后开始创建自己的歌单"
                     LoginMode.FORGET -> "验证邮箱后重设登录密码"
                 },
-                color = MusicTextSecondary,
+                color = LocalMusicThemeColors.current.textSecondary,
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center
             )
@@ -187,17 +169,17 @@ fun LoginEntry(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     HorizontalDivider(
-                        color = MusicBorder,
+                        color = LocalMusicThemeColors.current.border,
                         thickness = 1.dp,
                         modifier = Modifier.weight(1f)
                     )
                     Text("其他登陆方式",
-                        color = MusicTextSecondary,
+                        color = LocalMusicThemeColors.current.textSecondary,
                         fontSize = 12.sp,
                         modifier = Modifier.padding(horizontal = 12.dp)
                     )
                     HorizontalDivider(
-                        color = MusicBorder,
+                        color = LocalMusicThemeColors.current.border,
                         thickness = 1.dp,
                         modifier = Modifier.weight(1f)
                     )
@@ -246,10 +228,10 @@ fun AccountForm(loginViewModel: LoginViewModel) {
                 .fillMaxWidth(0.8f)
                 .height(45.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = MusicPrimary,
+                containerColor = LocalMusicThemeColors.current.primary,
                 contentColor = Color.White,
-                disabledContainerColor = MusicDisabledContainer,
-                disabledContentColor = MusicDisabledContent
+                disabledContainerColor = LocalMusicThemeColors.current.disabledContainer,
+                disabledContentColor = LocalMusicThemeColors.current.disabledContent
             ),
             shape = RoundedCornerShape(14.dp)
         ) {
@@ -328,10 +310,10 @@ fun RegisterForm(loginViewModel: LoginViewModel, context: Context) {
                 .fillMaxWidth(0.8f)
                 .height(45.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = MusicPrimary,
+                containerColor = LocalMusicThemeColors.current.primary,
                 contentColor = Color.White,
-                disabledContainerColor = MusicDisabledContainer,
-                disabledContentColor = MusicDisabledContent
+                disabledContainerColor = LocalMusicThemeColors.current.disabledContainer,
+                disabledContentColor = LocalMusicThemeColors.current.disabledContent
             ),
             shape = RoundedCornerShape(14.dp)
         ) {
@@ -373,10 +355,10 @@ fun ForgetForm(loginViewModel: LoginViewModel, context: Context) {
                 .fillMaxWidth(0.8f)
                 .height(45.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = MusicPrimary,
+                containerColor = LocalMusicThemeColors.current.primary,
                 contentColor = Color.White,
-                disabledContainerColor = MusicDisabledContainer,
-                disabledContentColor = MusicDisabledContent
+                disabledContainerColor = LocalMusicThemeColors.current.disabledContainer,
+                disabledContentColor = LocalMusicThemeColors.current.disabledContent
             ),
             shape = RoundedCornerShape(14.dp)
         ) {

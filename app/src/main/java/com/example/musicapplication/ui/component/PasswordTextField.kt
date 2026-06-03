@@ -36,11 +36,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.musicapplication.ui.theme.MusicBorder
-import com.example.musicapplication.ui.theme.MusicField
-import com.example.musicapplication.ui.theme.MusicIconMuted
-import com.example.musicapplication.ui.theme.MusicPrimary
-import com.example.musicapplication.ui.theme.MusicTextHint
+import com.example.musicapplication.ui.theme.LocalMusicThemeColors
+
 
 @Composable
 fun PasswordTextField(
@@ -54,7 +51,7 @@ fun PasswordTextField(
         onValueChange = onValueChange,
         singleLine = true,
         visualTransformation = if (hidden) PasswordVisualTransformation('*') else VisualTransformation.None,
-        cursorBrush = SolidColor(MusicPrimary),
+        cursorBrush = SolidColor(LocalMusicThemeColors.current.primary),
         textStyle = TextStyle(
             fontSize = 18.sp,
         ),
@@ -65,11 +62,11 @@ fun PasswordTextField(
                     .height(50.dp)
                     .border(
                         width = 2.dp,
-                        color = MusicBorder,
+                        color = LocalMusicThemeColors.current.border,
                         shape = RoundedCornerShape(6.dp)
                     )
                     .background(
-                        color = MusicField,
+                        color = LocalMusicThemeColors.current.field,
                         shape = RoundedCornerShape(6.dp)
                     )
                     .padding(10.dp),
@@ -82,7 +79,7 @@ fun PasswordTextField(
                         Text(
                             text = hint,
                             fontSize = 16.sp,
-                            color = MusicTextHint
+                            color = LocalMusicThemeColors.current.textHint
                         )
                     }
                     innerField()
@@ -93,7 +90,7 @@ fun PasswordTextField(
                             if (hidden) Icons.Default.VisibilityOff
                             else Icons.Default.Visibility,
                         contentDescription = null,
-                        tint = MusicIconMuted
+                        tint = LocalMusicThemeColors.current.iconMuted
                     )
                 }
             }

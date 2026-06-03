@@ -51,11 +51,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.musicapplication.domain.model.Song
 import com.example.musicapplication.ui.component.MusicCollectionScaffold
-import com.example.musicapplication.ui.theme.MusicBorder
-import com.example.musicapplication.ui.theme.MusicPrimary
-import com.example.musicapplication.ui.theme.MusicSurface
-import com.example.musicapplication.ui.theme.MusicTextPrimary
-import com.example.musicapplication.ui.theme.MusicTextSecondary
+import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -158,20 +154,20 @@ private fun FavoriteRefreshIndicator(
             }
             .size(36.dp)
             .clip(CircleShape)
-            .background(MusicSurface)
-            .border(1.dp, MusicBorder, CircleShape),
+            .background(LocalMusicThemeColors.current.surface)
+            .border(1.dp, LocalMusicThemeColors.current.border, CircleShape),
         contentAlignment = Alignment.Center
     ) {
         if (isRefreshing) {
             CircularProgressIndicator(
                 modifier = Modifier.size(26.dp),
-                color = MusicPrimary,
+                color = LocalMusicThemeColors.current.primary,
                 strokeWidth = 2.5.dp
             )
         } else {
             CircularProgressIndicator(
                 progress = { state.distanceFraction.coerceIn(0f, 1f) },
-                color = MusicPrimary,
+                color = LocalMusicThemeColors.current.primary,
                 strokeWidth = 3.dp,
                 modifier = Modifier.size(20.dp)
             )
@@ -190,8 +186,8 @@ private fun FavoriteSongRow(
             .fillMaxWidth()
             .height(68.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(MusicSurface)
-            .border(1.dp, MusicBorder, RoundedCornerShape(16.dp))
+            .background(LocalMusicThemeColors.current.surface)
+            .border(1.dp, LocalMusicThemeColors.current.border, RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -213,7 +209,7 @@ private fun FavoriteSongRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = song.songTitle,
-                color = MusicTextPrimary,
+                color = LocalMusicThemeColors.current.textPrimary,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
@@ -222,7 +218,7 @@ private fun FavoriteSongRow(
 
             Text(
                 text = song.singer,
-                color = MusicTextSecondary,
+                color = LocalMusicThemeColors.current.textSecondary,
                 fontSize = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -239,7 +235,7 @@ private fun FavoriteSongRow(
                     }
                 ),
                 contentDescription = null,
-                tint = MusicPrimary,
+                tint = LocalMusicThemeColors.current.primary,
                 modifier = Modifier.size(24.dp)
             )
         }

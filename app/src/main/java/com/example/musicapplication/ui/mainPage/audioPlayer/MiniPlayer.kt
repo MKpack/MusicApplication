@@ -2,6 +2,7 @@ package com.example.musicapplication.ui.mainPage.audioPlayer
 
 import android.content.Context
 import androidx.annotation.DrawableRes
+import androidx.annotation.OptIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,21 +36,16 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavController
 import coil.compose.rememberAsyncImagePainter
 import com.example.musicapplication.R
-import com.example.musicapplication.config.RouterConfig
-import com.example.musicapplication.ui.theme.MusicBorder
-import com.example.musicapplication.ui.theme.MusicIconMuted
-import com.example.musicapplication.ui.theme.MusicPlayerSurface
-import com.example.musicapplication.ui.theme.MusicPrimary
-import com.example.musicapplication.ui.theme.MusicSurface
-import com.example.musicapplication.ui.theme.MusicTextPrimary
-import com.example.musicapplication.ui.theme.MusicTextSecondary
+import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 
 /**
  * 已弃用
  */
+@OptIn(UnstableApi::class)
 @Composable
 fun MiniPlayer(
     context: Context,
@@ -75,10 +71,10 @@ fun MiniPlayer(
                 .height(70.dp)
                 .then(dragModifier)
                 .clip(RoundedCornerShape(22.dp))
-                .background(MusicPlayerSurface)
+                .background(LocalMusicThemeColors.current.playerSurface)
                 .border(
                     width = 1.dp,
-                    color = MusicBorder,
+                    color = LocalMusicThemeColors.current.border,
                     shape = RoundedCornerShape(22.dp)
                 )
                 .clickable {
@@ -110,7 +106,7 @@ fun MiniPlayer(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     fontSize = 16.sp,
-                    color = MusicTextPrimary,
+                    color = LocalMusicThemeColors.current.textPrimary,
                     fontWeight = FontWeight.Medium
                 )
 
@@ -121,7 +117,7 @@ fun MiniPlayer(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     fontSize = 12.sp,
-                    color = MusicTextSecondary
+                    color = LocalMusicThemeColors.current.textSecondary
                 )
             }
 
@@ -129,7 +125,7 @@ fun MiniPlayer(
 
             MiniPlayerIconButton(
                 icon = if (isPlaying) R.drawable.ic_pause_mini else R.drawable.ic_play_mini,
-                tint = MusicPrimary,
+                tint = LocalMusicThemeColors.current.primary,
                 iconSize = 30.dp,
                 onClick = {
                     if (isPlaying) {
@@ -144,7 +140,7 @@ fun MiniPlayer(
 
             MiniPlayerIconButton(
                 icon = R.drawable.ic_next_mini,
-                tint = MusicPrimary,
+                tint = LocalMusicThemeColors.current.primary,
                 iconSize = 30.dp,
                 onClick = { }
             )

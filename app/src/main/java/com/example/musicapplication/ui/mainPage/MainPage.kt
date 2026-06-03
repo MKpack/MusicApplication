@@ -53,7 +53,7 @@ import com.example.musicapplication.ui.mainPage.profile.recent.RecentMusicScreen
 import com.example.musicapplication.ui.mainPage.profile.account.ProfileAccountScreen
 import com.example.musicapplication.ui.mainPage.profile.setting.ProfileSettingScreen
 import com.example.musicapplication.ui.session.SessionViewModel
-import com.example.musicapplication.ui.theme.MusicBgBottom
+import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 import com.example.musicapplication.utils.LocalAudioMetaDataReader
 
 
@@ -154,7 +154,7 @@ fun MainPage(
                     }
                 }
             },
-            containerColor = MusicBgBottom
+            containerColor = LocalMusicThemeColors.current.bgBottom
         ) { innerPadding ->
 
             NavHost(

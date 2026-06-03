@@ -55,37 +55,32 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import com.example.musicapplication.R
-import com.example.musicapplication.ui.theme.MusicBgBottom
-import com.example.musicapplication.ui.theme.MusicBgTop
-import com.example.musicapplication.ui.theme.MusicBorder
-import com.example.musicapplication.ui.theme.MusicCardSoft
-import com.example.musicapplication.ui.theme.MusicDivider
-import com.example.musicapplication.ui.theme.MusicIconMuted
-import com.example.musicapplication.ui.theme.MusicPrimary
-import com.example.musicapplication.ui.theme.MusicPrimarySoft
-import com.example.musicapplication.ui.theme.MusicSurface
-import com.example.musicapplication.ui.theme.MusicTextPrimary
-import com.example.musicapplication.ui.theme.MusicTextSecondary
+import com.example.musicapplication.ui.theme.LocalMusicThemeColors
+import com.example.musicapplication.ui.theme.MusicThemePreset
+import com.example.musicapplication.ui.theme.ThemeViewModel
 import com.example.musicapplication.utils.LocalAudioMetaDataReader
 
 @Composable
 fun ProfileScreen(
     modifier: Modifier = Modifier,
-    profileViewModel: ProfileViewModel = hiltViewModel(),
     onClickAccount: () -> Unit,
     onClickDownload: () -> Unit,
     onClickFavorite: () -> Unit,
     onClickHistory: () -> Unit,
     onClickSetting: () -> Unit,
     onClickAbout: () -> Unit,
-    onClickLogout: () -> Unit
+    onClickLogout: () -> Unit,
+    profileViewModel: ProfileViewModel = hiltViewModel(),
+    themeViewModel: ThemeViewModel = hiltViewModel()
 ) {
     val uiState by profileViewModel.uiState.collectAsState()
     val context = LocalContext.current
     var isThemeExpanded by remember { mutableStateOf(false) }
-    var selectedThemeKey by remember { mutableStateOf("green") }
+//    var selectedThemeKey by remember { mutableStateOf("green") }
+    val themePreset by themeViewModel.themePreset.collectAsStateWithLifecycle()
 
     LaunchedEffect(uiState.errorMessage) {
         val message = uiState.errorMessage ?: return@LaunchedEffect
@@ -98,7 +93,10 @@ fun ProfileScreen(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(MusicBgTop, MusicBgBottom)
+                    colors = listOf(
+                        LocalMusicThemeColors.current.bgTop,
+                        LocalMusicThemeColors.current.bgBottom
+                    )
                 )
             ),
         contentPadding = PaddingValues(
@@ -139,9 +137,9 @@ fun ProfileScreen(
                 expandedContent = mapOf(
                     0 to {
                         ThemeColorChooser(
-                            selectedKey = selectedThemeKey,
+                            selectedKey = themePreset,
                             onSelected = { option ->
-                                selectedThemeKey = option.key
+                                themeViewModel.saveThemePreset(option)
                                 Toast.makeText(context, "已选择${option.name}", Toast.LENGTH_SHORT).show()
                             }
                         )
@@ -165,7 +163,7 @@ private fun ProfileHeader() {
         Column {
             Text(
                 text = "我的",
-                color = MusicTextPrimary,
+                color = LocalMusicThemeColors.current.textPrimary,
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -174,7 +172,7 @@ private fun ProfileHeader() {
 
             Text(
                 text = "管理你的音乐与偏好",
-                color = MusicTextSecondary,
+                color = LocalMusicThemeColors.current.textSecondary,
                 fontSize = 14.sp
             )
         }
@@ -194,7 +192,7 @@ private fun ProfileHeader() {
             Icon(
                 imageVector = Icons.Default.Settings,
                 contentDescription = null,
-                tint = MusicIconMuted,
+                tint = LocalMusicThemeColors.current.iconMuted,
                 modifier = Modifier.size(21.dp)
             )
         }
@@ -210,8 +208,8 @@ private fun ProfileSummary(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .background(MusicSurface)
-            .border(1.dp, MusicBorder, RoundedCornerShape(24.dp))
+            .background(LocalMusicThemeColors.current.surface)
+            .border(1.dp, LocalMusicThemeColors.current.border, RoundedCornerShape(24.dp))
             .padding(18.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -223,7 +221,7 @@ private fun ProfileSummary(
 
         Text(
             text = uiState.nickName,
-            color = MusicTextPrimary,
+            color = LocalMusicThemeColors.current.textPrimary,
             fontSize = 22.sp,
             fontWeight = FontWeight.Bold
         )
@@ -232,7 +230,7 @@ private fun ProfileSummary(
 
         Text(
             text = uiState.email,
-            color = MusicTextSecondary,
+            color = LocalMusicThemeColors.current.textSecondary,
             fontSize = 13.sp
         )
 
@@ -269,7 +267,7 @@ private fun AvatarImage(
             .clip(CircleShape)
             .border(
                 width = 3.dp,
-                color = MusicSurface,
+                color = LocalMusicThemeColors.current.surface,
                 shape = CircleShape
             )
     )
@@ -285,13 +283,13 @@ private fun StatCard(
         modifier = modifier
             .height(72.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(MusicCardSoft),
+            .background(LocalMusicThemeColors.current.cardSoft),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         Text(
             text = value,
-            color = MusicTextPrimary,
+            color = LocalMusicThemeColors.current.textPrimary,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold
         )
@@ -300,7 +298,7 @@ private fun StatCard(
 
         Text(
             text = label,
-            color = MusicTextSecondary,
+            color = LocalMusicThemeColors.current.textSecondary,
             fontSize = 12.sp
         )
     }
@@ -314,21 +312,6 @@ private data class ProfileAction(
     val onClick: () -> Unit = {}
 )
 
-private data class ThemeColorOption(
-    val key: String,
-    val name: String,
-    val color: Color
-)
-
-private val themeColorOptions = listOf(
-    ThemeColorOption("green", "松石绿", Color(0xFF1DB954)),
-    ThemeColorOption("blue", "湖蓝", Color(0xFF0EA5E9)),
-    ThemeColorOption("rose", "玫瑰", Color(0xFFF43F5E)),
-    ThemeColorOption("amber", "琥珀", Color(0xFFF59E0B)),
-    ThemeColorOption("violet", "紫罗兰", Color(0xFF8B5CF6)),
-    ThemeColorOption("slate", "石墨", Color(0xFF64748B))
-)
-
 @Composable
 private fun ProfileGroup(
     items: List<ProfileAction>,
@@ -339,8 +322,8 @@ private fun ProfileGroup(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(22.dp))
-            .background(MusicSurface)
-            .border(1.dp, MusicBorder, RoundedCornerShape(22.dp))
+            .background(LocalMusicThemeColors.current.surface)
+            .border(1.dp, LocalMusicThemeColors.current.border, RoundedCornerShape(22.dp))
             .padding(vertical = 6.dp)
 
     ) {
@@ -354,7 +337,7 @@ private fun ProfileGroup(
             if (index != items.lastIndex) {
                 HorizontalDivider(
                     modifier = Modifier.padding(start = 58.dp),
-                    color = MusicDivider,
+                    color = LocalMusicThemeColors.current.divider,
                     thickness = 1.dp
                 )
             }
@@ -364,8 +347,8 @@ private fun ProfileGroup(
 
 @Composable
 private fun ThemeColorChooser(
-    selectedKey: String,
-    onSelected: (ThemeColorOption) -> Unit
+    selectedKey: MusicThemePreset,
+    onSelected: (MusicThemePreset) -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -379,20 +362,20 @@ private fun ThemeColorChooser(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            themeColorOptions.forEach { option ->
-                val selected = option.key == selectedKey
+            MusicThemePreset.entries.forEach { preset ->
+                val selected = preset == selectedKey
 
                 Box(
                     modifier = Modifier
                         .size(28.dp)
                         .clip(CircleShape)
-                        .background(option.color)
+                        .background(preset.primary)
                         .border(
                             width = if (selected) 2.dp else 0.dp,
-                            color = MusicTextPrimary,
+                            color = LocalMusicThemeColors.current.textPrimary,
                             shape = CircleShape
                         )
-                        .clickable { onSelected(option) },
+                        .clickable { onSelected(preset) },
                     contentAlignment = Alignment.Center
                 ) {
                     if (selected) {
@@ -400,7 +383,7 @@ private fun ThemeColorChooser(
                             modifier = Modifier
                                 .size(8.dp)
                                 .clip(CircleShape)
-                                .background(MusicSurface)
+                                .background(LocalMusicThemeColors.current.surface)
                         )
                     }
                 }
@@ -434,20 +417,20 @@ private fun ProfileRow(
             modifier = Modifier
                 .size(34.dp)
                 .clip(CircleShape)
-                .background(MusicPrimarySoft),
+                .background(LocalMusicThemeColors.current.primarySoft),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = item.icon,
                 contentDescription = null,
-                tint = MusicPrimary,
+                tint = LocalMusicThemeColors.current.primary,
                 modifier = Modifier.size(18.dp)
             )
         }
 
         Text(
             text = item.title,
-            color = MusicTextPrimary,
+            color = LocalMusicThemeColors.current.textPrimary,
             fontSize = 15.sp,
             fontWeight = FontWeight.Medium,
             modifier = Modifier
@@ -458,7 +441,7 @@ private fun ProfileRow(
         Icon(
             imageVector = if (item.isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
             contentDescription = null,
-            tint = MusicIconMuted,
+            tint = LocalMusicThemeColors.current.iconMuted,
             modifier = Modifier.size(22.dp)
         )
     }

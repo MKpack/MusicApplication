@@ -41,16 +41,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.musicapplication.ui.theme.MusicBgBottom
-import com.example.musicapplication.ui.theme.MusicBgTop
-import com.example.musicapplication.ui.theme.MusicBorder
-import com.example.musicapplication.ui.theme.MusicCardSoft
-import com.example.musicapplication.ui.theme.MusicIconMuted
-import com.example.musicapplication.ui.theme.MusicPrimary
-import com.example.musicapplication.ui.theme.MusicPrimarySoft
-import com.example.musicapplication.ui.theme.MusicSurface
-import com.example.musicapplication.ui.theme.MusicTextPrimary
-import com.example.musicapplication.ui.theme.MusicTextSecondary
+import com.example.musicapplication.ui.theme.LocalMusicThemeColors
+
 
 @Composable
 fun MusicCollectionScaffold(
@@ -72,7 +64,10 @@ fun MusicCollectionScaffold(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(MusicBgTop, MusicBgBottom)
+                    colors = listOf(
+                        LocalMusicThemeColors.current.bgTop,
+                        LocalMusicThemeColors.current.bgBottom
+                    )
                 )
             )
     ) {
@@ -161,14 +156,14 @@ private fun MusicCollectionTopBar(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = null,
-                tint = MusicTextPrimary,
+                tint = LocalMusicThemeColors.current.textPrimary,
                 modifier = Modifier.size(25.dp)
             )
         }
 
         Text(
             text = title,
-            color = MusicTextPrimary,
+            color = LocalMusicThemeColors.current.textPrimary,
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
@@ -188,8 +183,8 @@ private fun MusicCollectionTag(
             .fillMaxWidth()
             .height(58.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(MusicSurface)
-            .border(1.dp, MusicBorder, RoundedCornerShape(18.dp))
+            .background(LocalMusicThemeColors.current.surface)
+            .border(1.dp, LocalMusicThemeColors.current.border, RoundedCornerShape(18.dp))
             .padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -197,13 +192,13 @@ private fun MusicCollectionTag(
             modifier = Modifier
                 .size(34.dp)
                 .clip(CircleShape)
-                .background(MusicPrimarySoft),
+                .background(LocalMusicThemeColors.current.primarySoft),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MusicPrimary,
+                tint = LocalMusicThemeColors.current.primary,
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -212,7 +207,7 @@ private fun MusicCollectionTag(
 
         Text(
             text = text,
-            color = MusicTextPrimary,
+            color = LocalMusicThemeColors.current.textPrimary,
             fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
@@ -231,8 +226,8 @@ private fun PlayAllButton(
             .fillMaxWidth()
             .height(48.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(if (enabled) MusicPrimary else MusicCardSoft)
-            .border(1.dp, MusicBorder, RoundedCornerShape(18.dp))
+            .background(if (enabled) LocalMusicThemeColors.current.primary else LocalMusicThemeColors.current.cardSoft)
+            .border(1.dp, LocalMusicThemeColors.current.border, RoundedCornerShape(18.dp))
             .clickable(
                 enabled = enabled,
                 interactionSource = remember { MutableInteractionSource() },
@@ -246,7 +241,7 @@ private fun PlayAllButton(
         Icon(
             imageVector = Icons.Default.PlayArrow,
             contentDescription = null,
-            tint = if (enabled) Color.White else MusicIconMuted,
+            tint = if (enabled) Color.White else LocalMusicThemeColors.current.iconMuted,
             modifier = Modifier.size(20.dp)
         )
 
@@ -254,7 +249,7 @@ private fun PlayAllButton(
 
         Text(
             text = "播放全部",
-            color = if (enabled) Color.White else MusicTextSecondary,
+            color = if (enabled) Color.White else LocalMusicThemeColors.current.textSecondary,
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold
         )
@@ -272,8 +267,8 @@ private fun EmptyListState(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(22.dp))
-            .background(MusicSurface)
-            .border(1.dp, MusicBorder, RoundedCornerShape(22.dp))
+            .background(LocalMusicThemeColors.current.surface)
+            .border(1.dp, LocalMusicThemeColors.current.border, RoundedCornerShape(22.dp))
             .padding(horizontal = 26.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -282,13 +277,13 @@ private fun EmptyListState(
             modifier = Modifier
                 .size(68.dp)
                 .clip(CircleShape)
-                .background(MusicPrimarySoft),
+                .background(LocalMusicThemeColors.current.primarySoft),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MusicPrimary,
+                tint = LocalMusicThemeColors.current.primary,
                 modifier = Modifier.size(32.dp)
             )
         }
@@ -297,7 +292,7 @@ private fun EmptyListState(
 
         Text(
             text = title,
-            color = MusicTextPrimary,
+            color = LocalMusicThemeColors.current.textPrimary,
             fontSize = 19.sp,
             fontWeight = FontWeight.Bold
         )
@@ -306,7 +301,7 @@ private fun EmptyListState(
 
         Text(
             text = description,
-            color = MusicTextSecondary,
+            color = LocalMusicThemeColors.current.textSecondary,
             fontSize = 13.sp,
             lineHeight = 19.sp
         )

@@ -33,10 +33,8 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.musicapplication.R
 import com.example.musicapplication.domain.model.Song
 import com.example.musicapplication.ui.component.MusicCollectionScaffold
-import com.example.musicapplication.ui.theme.MusicBorder
-import com.example.musicapplication.ui.theme.MusicSurface
-import com.example.musicapplication.ui.theme.MusicTextPrimary
-import com.example.musicapplication.ui.theme.MusicTextSecondary
+import com.example.musicapplication.ui.theme.LocalMusicThemeColors
+
 
 @Composable
 fun RecentMusicScreen(
@@ -92,8 +90,8 @@ private fun RecentSongRow(
             .fillMaxWidth()
             .height(68.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(MusicSurface)
-            .border(1.dp, MusicBorder, RoundedCornerShape(16.dp))
+            .background(LocalMusicThemeColors.current.surface)
+            .border(1.dp, LocalMusicThemeColors.current.border, RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically
@@ -115,7 +113,7 @@ private fun RecentSongRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = song.songTitle,
-                color = MusicTextPrimary,
+                color = LocalMusicThemeColors.current.textPrimary,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
@@ -124,7 +122,7 @@ private fun RecentSongRow(
 
             Text(
                 text = song.singer,
-                color = MusicTextSecondary,
+                color = LocalMusicThemeColors.current.textSecondary,
                 fontSize = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis

@@ -37,14 +37,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.musicapplication.ui.theme.MusicBgBottom
-import com.example.musicapplication.ui.theme.MusicBgTop
-import com.example.musicapplication.ui.theme.MusicBorder
-import com.example.musicapplication.ui.theme.MusicPrimary
-import com.example.musicapplication.ui.theme.MusicPrimarySoft
-import com.example.musicapplication.ui.theme.MusicSurface
-import com.example.musicapplication.ui.theme.MusicTextPrimary
-import com.example.musicapplication.ui.theme.MusicTextSecondary
+import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 
 @Composable
 fun AboutMusicScreen(
@@ -56,7 +49,10 @@ fun AboutMusicScreen(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(MusicBgTop, MusicBgBottom)
+                    colors = listOf(
+                        LocalMusicThemeColors.current.bgTop,
+                        LocalMusicThemeColors.current.bgBottom
+                    )
                 )
             ),
         contentPadding = PaddingValues(
@@ -121,14 +117,14 @@ private fun AboutTopBar(
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = null,
-                tint = MusicTextPrimary,
+                tint = LocalMusicThemeColors.current.textPrimary,
                 modifier = Modifier.size(25.dp)
             )
         }
 
         Text(
             text = "关于音乐",
-            color = MusicTextPrimary,
+            color = LocalMusicThemeColors.current.textPrimary,
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(start = 4.dp)
@@ -142,8 +138,8 @@ private fun AppIdentityCard() {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .background(MusicSurface)
-            .border(1.dp, MusicBorder, RoundedCornerShape(24.dp))
+            .background(LocalMusicThemeColors.current.surface)
+            .border(1.dp, LocalMusicThemeColors.current.border, RoundedCornerShape(24.dp))
             .padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -151,13 +147,13 @@ private fun AppIdentityCard() {
             modifier = Modifier
                 .size(58.dp)
                 .clip(CircleShape)
-                .background(MusicPrimarySoft),
+                .background(LocalMusicThemeColors.current.primarySoft),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Info,
                 contentDescription = null,
-                tint = MusicPrimary,
+                tint = LocalMusicThemeColors.current.primary,
                 modifier = Modifier.size(30.dp)
             )
         }
@@ -166,7 +162,7 @@ private fun AppIdentityCard() {
 
         Text(
             text = "MusicSource",
-            color = MusicTextPrimary,
+            color = LocalMusicThemeColors.current.textPrimary,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold
         )
@@ -175,7 +171,7 @@ private fun AppIdentityCard() {
 
         Text(
             text = "版本 1.0",
-            color = MusicTextSecondary,
+            color = LocalMusicThemeColors.current.textSecondary,
             fontSize = 13.sp
         )
     }
@@ -191,8 +187,8 @@ private fun AboutInfoCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(22.dp))
-            .background(MusicSurface)
-            .border(1.dp, MusicBorder, RoundedCornerShape(22.dp))
+            .background(LocalMusicThemeColors.current.surface)
+            .border(1.dp, LocalMusicThemeColors.current.border, RoundedCornerShape(22.dp))
             .padding(16.dp),
         verticalAlignment = Alignment.Top
     ) {
@@ -200,13 +196,13 @@ private fun AboutInfoCard(
             modifier = Modifier
                 .size(36.dp)
                 .clip(CircleShape)
-                .background(MusicPrimarySoft),
+                .background(LocalMusicThemeColors.current.primarySoft),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MusicPrimary,
+                tint = LocalMusicThemeColors.current.primary,
                 modifier = Modifier.size(19.dp)
             )
         }
@@ -216,7 +212,7 @@ private fun AboutInfoCard(
         ) {
             Text(
                 text = title,
-                color = MusicTextPrimary,
+                color = LocalMusicThemeColors.current.textPrimary,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -225,7 +221,7 @@ private fun AboutInfoCard(
 
             Text(
                 text = body,
-                color = MusicTextSecondary,
+                color = LocalMusicThemeColors.current.textSecondary,
                 fontSize = 13.sp,
                 lineHeight = 20.sp
             )

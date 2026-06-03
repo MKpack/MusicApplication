@@ -46,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -60,18 +61,7 @@ import com.canhub.cropper.CropImageContract
 import com.canhub.cropper.CropImageContractOptions
 import com.canhub.cropper.CropImageOptions
 import com.example.musicapplication.R
-import com.example.musicapplication.ui.theme.MusicBgBottom
-import com.example.musicapplication.ui.theme.MusicBgTop
-import com.example.musicapplication.ui.theme.MusicBorder
-import com.example.musicapplication.ui.theme.MusicCardSoft
-import com.example.musicapplication.ui.theme.MusicField
-import com.example.musicapplication.ui.theme.MusicIconMuted
-import com.example.musicapplication.ui.theme.MusicPrimary
-import com.example.musicapplication.ui.theme.MusicPrimarySoft
-import com.example.musicapplication.ui.theme.MusicSurface
-import com.example.musicapplication.ui.theme.MusicTextHint
-import com.example.musicapplication.ui.theme.MusicTextPrimary
-import com.example.musicapplication.ui.theme.MusicTextSecondary
+import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 import com.example.musicapplication.utils.LocalAudioMetaDataReader
 
 @Composable
@@ -123,7 +113,10 @@ fun ProfileAccountScreen(
             .fillMaxSize()
             .background(
                 Brush.verticalGradient(
-                    colors = listOf(MusicBgTop, MusicBgBottom)
+                    colors = listOf(
+                        LocalMusicThemeColors.current.bgTop,
+                        LocalMusicThemeColors.current.bgBottom
+                    )
                 )
             )
     ) {
@@ -188,7 +181,7 @@ private fun AccountTopBar(
             Icon(
                 imageVector = Icons.Default.ArrowBack,
                 contentDescription = null,
-                tint = MusicTextPrimary
+                tint = LocalMusicThemeColors.current.textPrimary
             )
         }
 
@@ -197,7 +190,7 @@ private fun AccountTopBar(
         ) {
             Text(
                 text = "账号资料",
-                color = MusicTextPrimary,
+                color = LocalMusicThemeColors.current.textPrimary,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -216,10 +209,10 @@ private fun AccountTopBar(
             enabled = !isSaving,
             shape = RoundedCornerShape(999.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = MusicPrimary,
-                contentColor = MusicSurface,
-                disabledContainerColor = MusicPrimarySoft,
-                disabledContentColor = MusicIconMuted
+                containerColor = LocalMusicThemeColors.current.primary,
+                contentColor = Color.White,
+                disabledContainerColor = LocalMusicThemeColors.current.disabledContainer,
+                disabledContentColor = LocalMusicThemeColors.current.disabledContent
             ),
             contentPadding = PaddingValues(horizontal = 18.dp)
         ) {
@@ -243,8 +236,8 @@ private fun AccountEditCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(22.dp))
-            .background(MusicSurface)
-            .border(1.dp, MusicBorder, RoundedCornerShape(22.dp))
+            .background(LocalMusicThemeColors.current.surface)
+            .border(1.dp, LocalMusicThemeColors.current.border, RoundedCornerShape(22.dp))
             .padding(start = 16.dp, end = 16.dp, top = 24.dp, bottom = 18.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -263,15 +256,15 @@ private fun AccountEditCard(
                 modifier = Modifier
                     .size(100.dp)
                     .clip(CircleShape)
-                    .border(4.dp, MusicCardSoft, CircleShape)
+                    .border(4.dp, LocalMusicThemeColors.current.cardSoft, CircleShape)
             )
 
             Box(
                 modifier = Modifier
                     .size(34.dp)
                     .clip(CircleShape)
-                    .background(MusicPrimary)
-                    .border(3.dp, MusicSurface, CircleShape)
+                    .background(LocalMusicThemeColors.current.primary)
+                    .border(3.dp, LocalMusicThemeColors.current.surface, CircleShape)
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
@@ -282,7 +275,7 @@ private fun AccountEditCard(
                 Icon(
                     imageVector = Icons.Default.CameraAlt,
                     contentDescription = null,
-                    tint = MusicSurface,
+                    tint = LocalMusicThemeColors.current.surface,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -292,7 +285,7 @@ private fun AccountEditCard(
 
         Text(
             text = "更换头像",
-            color = MusicPrimary,
+            color = LocalMusicThemeColors.current.primary,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold
         )
@@ -316,7 +309,7 @@ private fun NickNameField(
     ) {
         Text(
             text = "昵称",
-            color = MusicTextSecondary,
+            color = LocalMusicThemeColors.current.textSecondary,
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium
         )
@@ -327,9 +320,9 @@ private fun NickNameField(
             value = nickName,
             onValueChange = onNickNameChange,
             singleLine = true,
-            cursorBrush = SolidColor(MusicPrimary),
+            cursorBrush = SolidColor(LocalMusicThemeColors.current.primary),
             textStyle = TextStyle(
-                color = MusicTextPrimary,
+                color = LocalMusicThemeColors.current.textPrimary,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Medium
             ),
@@ -339,15 +332,15 @@ private fun NickNameField(
                         .fillMaxWidth()
                         .height(52.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(MusicField)
-                        .border(1.dp, MusicBorder, RoundedCornerShape(12.dp))
+                        .background(LocalMusicThemeColors.current.field)
+                        .border(1.dp, LocalMusicThemeColors.current.border, RoundedCornerShape(12.dp))
                         .padding(horizontal = 14.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = null,
-                        tint = MusicIconMuted,
+                        tint = LocalMusicThemeColors.current.iconMuted,
                         modifier = Modifier.size(19.dp)
                     )
 
@@ -360,7 +353,7 @@ private fun NickNameField(
                         if (nickName.isBlank()) {
                             Text(
                                 text = "输入昵称",
-                                color = MusicTextHint,
+                                color = LocalMusicThemeColors.current.textHint,
                                 fontSize = 15.sp
                             )
                         }
@@ -381,8 +374,8 @@ private fun ReadOnlyProfileCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(22.dp))
-            .background(MusicSurface)
-            .border(1.dp, MusicBorder, RoundedCornerShape(22.dp))
+            .background(LocalMusicThemeColors.current.surface)
+            .border(1.dp, LocalMusicThemeColors.current.border, RoundedCornerShape(22.dp))
             .padding(vertical = 6.dp)
     ) {
         ReadOnlyInfoRow(
@@ -399,7 +392,7 @@ private fun ReadOnlyProfileCard(
 
         Text(
             text = "用户 ID 和邮箱不可修改",
-            color = MusicTextSecondary,
+            color = LocalMusicThemeColors.current.textSecondary,
             fontSize = 12.sp,
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)
         )
@@ -423,13 +416,13 @@ private fun ReadOnlyInfoRow(
             modifier = Modifier
                 .size(34.dp)
                 .clip(CircleShape)
-                .background(MusicPrimarySoft),
+                .background(LocalMusicThemeColors.current.primarySoft),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MusicPrimary,
+                tint = LocalMusicThemeColors.current.primary,
                 modifier = Modifier.size(18.dp)
             )
         }
@@ -441,12 +434,12 @@ private fun ReadOnlyInfoRow(
         ) {
             Text(
                 text = label,
-                color = MusicTextSecondary,
+                color = LocalMusicThemeColors.current.textSecondary,
                 fontSize = 12.sp
             )
             Text(
                 text = value,
-                color = MusicTextPrimary,
+                color = LocalMusicThemeColors.current.textPrimary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium
             )
@@ -455,7 +448,7 @@ private fun ReadOnlyInfoRow(
         Icon(
             imageVector = Icons.Default.Lock,
             contentDescription = null,
-            tint = MusicIconMuted,
+            tint = LocalMusicThemeColors.current.iconMuted,
             modifier = Modifier.size(18.dp)
         )
     }

@@ -66,13 +66,7 @@ import coil.request.ImageRequest
 import com.example.musicapplication.R
 import com.example.musicapplication.domain.model.Song
 import com.example.musicapplication.ui.component.AppleMusicBackground
-import com.example.musicapplication.ui.theme.MusicBorder
-import com.example.musicapplication.ui.theme.MusicIconMuted
-import com.example.musicapplication.ui.theme.MusicPlayerSurface
-import com.example.musicapplication.ui.theme.MusicPrimary
-import com.example.musicapplication.ui.theme.MusicPrimarySoft
-import com.example.musicapplication.ui.theme.MusicTextPrimary
-import com.example.musicapplication.ui.theme.MusicTextSecondary
+import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -333,7 +327,7 @@ private fun AppleMusicPlayerMorph(
                 if (p < 0.12f) {
                     Modifier.border(
                         width = 1.dp,
-                        color = MusicBorder,
+                        color = LocalMusicThemeColors.current.border,
                         shape = RoundedCornerShape(cardRadius)
                     )
                 } else {
@@ -365,7 +359,9 @@ private fun AppleMusicPlayerMorph(
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .background(MusicPlayerSurface.copy(alpha = whiteSurfaceAlpha))
+                    .background(
+                        LocalMusicThemeColors.current.playerSurface.copy(alpha = whiteSurfaceAlpha)
+                    )
             )
 
             Box(
@@ -456,7 +452,7 @@ private fun MiniContent(
         ) {
             Text(
                 text = song.songTitle,
-                color = MusicTextPrimary,
+                color = LocalMusicThemeColors.current.textPrimary,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -467,7 +463,7 @@ private fun MiniContent(
 
             Text(
                 text = song.singer,
-                color = MusicTextSecondary,
+                color = LocalMusicThemeColors.current.textSecondary,
                 fontSize = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -480,7 +476,7 @@ private fun MiniContent(
                     if (isPlaying) R.drawable.ic_pause_mini else R.drawable.ic_play_mini
                 ),
                 contentDescription = null,
-                tint = MusicPrimary,
+                tint = LocalMusicThemeColors.current.primary,
                 modifier = Modifier.size(30.dp)
             )
         }
@@ -491,7 +487,7 @@ private fun MiniContent(
             Icon(
                 painter = painterResource(R.drawable.ic_next_mini),
                 contentDescription = null,
-                tint = MusicPrimary,
+                tint = LocalMusicThemeColors.current.primary,
                 modifier = Modifier.size(30.dp)
             )
         }
@@ -638,7 +634,7 @@ private fun ArtworkTopContent(
             Icon(
                 painter = painterResource(R.drawable.heart_solid_full),
                 contentDescription = null,
-                tint = if (song.isLoved) MusicPrimary else Color.White,
+                tint = if (song.isLoved) LocalMusicThemeColors.current.primary else Color.White,
                 modifier = Modifier.size(34.dp)
             )
         }
@@ -858,7 +854,7 @@ private fun QueueNowPlayingHeader(
                     else R.drawable.heart_regular_full
                 ),
                 contentDescription = null,
-                tint = if (song.isLoved) MusicPrimary else Color.White,
+                tint = if (song.isLoved) LocalMusicThemeColors.current.primary else Color.White,
                 modifier = Modifier.size(34.dp)
             )
         }
@@ -914,7 +910,7 @@ private fun SongMoreActionSheet(
                 .background(Color.White)
                 .border(
                     width = 1.dp,
-                    color = MusicBorder,
+                    color = LocalMusicThemeColors.current.border,
                     shape = RoundedCornerShape(28.dp)
                 )
                 .clickable(
@@ -926,7 +922,7 @@ private fun SongMoreActionSheet(
         ) {
             Text(
                 text = "更多操作",
-                color = MusicTextPrimary,
+                color = LocalMusicThemeColors.current.textPrimary,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -937,30 +933,30 @@ private fun SongMoreActionSheet(
                 icon = R.drawable.ic_download_sheet,
                 title = "下载",
                 subtitle = "保存到本地离线播放",
-                iconBackground = MusicPrimarySoft,
-                iconTint = MusicPrimary,
-                titleColor = MusicTextPrimary,
-                subtitleColor = MusicTextSecondary
+                iconBackground = LocalMusicThemeColors.current.primarySoft,
+                iconTint = LocalMusicThemeColors.current.primary,
+                titleColor = LocalMusicThemeColors.current.textPrimary,
+                subtitleColor = LocalMusicThemeColors.current.textSecondary
             )
 
             SongMoreActionRow(
                 icon = R.drawable.ic_sleep_timer_sheet,
                 title = "定时睡眠",
                 subtitle = "设置自动停止播放",
-                iconBackground = MusicPrimarySoft,
-                iconTint = MusicPrimary,
-                titleColor = MusicTextPrimary,
-                subtitleColor = MusicTextSecondary
+                iconBackground = LocalMusicThemeColors.current.primarySoft,
+                iconTint = LocalMusicThemeColors.current.primary,
+                titleColor = LocalMusicThemeColors.current.textPrimary,
+                subtitleColor = LocalMusicThemeColors.current.textSecondary
             )
 
             SongMoreActionRow(
                 icon = R.drawable.ic_share_sheet,
                 title = "分享歌曲",
                 subtitle = "发送给好友或复制链接",
-                iconBackground = MusicPrimarySoft,
-                iconTint = MusicPrimary,
-                titleColor = MusicTextPrimary,
-                subtitleColor = MusicTextSecondary
+                iconBackground = LocalMusicThemeColors.current.primarySoft,
+                iconTint = LocalMusicThemeColors.current.primary,
+                titleColor = LocalMusicThemeColors.current.textPrimary,
+                subtitleColor = LocalMusicThemeColors.current.textSecondary
             )
         }
     }

@@ -35,11 +35,8 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.musicapplication.ui.mainPage.BarItem
-import com.example.musicapplication.ui.theme.MusicBorder
-import com.example.musicapplication.ui.theme.MusicIconMuted
-import com.example.musicapplication.ui.theme.MusicPrimary
-import com.example.musicapplication.ui.theme.MusicPrimarySoft
-import com.example.musicapplication.ui.theme.MusicSurface
+import com.example.musicapplication.ui.theme.LocalMusicThemeColors
+
 
 @Composable
 fun CustomBottomBar(
@@ -52,19 +49,19 @@ fun CustomBottomBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(MusicSurface)
+            .background(LocalMusicThemeColors.current.surface)
     ) {
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
             thickness = 1.dp,
-            color = MusicBorder
+            color = LocalMusicThemeColors.current.border
         )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(64.dp + bottomInset)
                 .padding(bottom = bottomInset)
-                .background(MusicSurface),
+                .background(LocalMusicThemeColors.current.surface),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -101,7 +98,7 @@ private fun BottomBarItem(
     selected: Boolean,
     onClick: () -> Unit
 ) {
-    val itemColor = if (selected) MusicPrimary else MusicIconMuted
+    val itemColor = if (selected) LocalMusicThemeColors.current.primary else LocalMusicThemeColors.current.iconMuted
     val interactionSource = remember { MutableInteractionSource() }
 
     Column(

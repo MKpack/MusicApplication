@@ -39,7 +39,7 @@ import kotlin.math.abs
 fun PlayerProgressBar(
     playerViewModel: PlayerViewModel
 ) {
-    val TAG = "MusicProgressBar2"
+    val TAG = "MusicProgressBar"
     val thumbRadius = 25.dp
     val thumbRadiusPx = with(LocalDensity.current) { thumbRadius.toPx() }
 

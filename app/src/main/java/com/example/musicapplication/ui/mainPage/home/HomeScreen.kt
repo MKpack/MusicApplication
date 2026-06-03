@@ -50,16 +50,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.musicapplication.domain.model.Song
-import com.example.musicapplication.ui.theme.MusicBgBottom
-import com.example.musicapplication.ui.theme.MusicBgTop
-import com.example.musicapplication.ui.theme.MusicBorder
-import com.example.musicapplication.ui.theme.MusicIconMuted
-import com.example.musicapplication.ui.theme.MusicPrimary
-import com.example.musicapplication.ui.theme.MusicPrimarySoft
-import com.example.musicapplication.ui.theme.MusicSurface
-import com.example.musicapplication.ui.theme.MusicTextHint
-import com.example.musicapplication.ui.theme.MusicTextPrimary
-import com.example.musicapplication.ui.theme.MusicTextSecondary
+import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 
 
 private data class PlaylistUi(
@@ -95,8 +86,8 @@ fun HomeScreen(
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        MusicBgTop,
-                        MusicBgBottom
+                        LocalMusicThemeColors.current.bgTop,
+                        LocalMusicThemeColors.current.bgBottom
                     )
                 )
             ),
@@ -143,7 +134,7 @@ fun HomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(20.dp))
-                    .background(MusicSurface)
+                    .background(LocalMusicThemeColors.current.surface)
                     .padding(vertical = 6.dp)
             ) {
                 songList.songs.forEachIndexed { index, song ->
@@ -160,7 +151,7 @@ fun HomeScreen(
                     if (index != songList.songs.lastIndex) {
                         HorizontalDivider(
                             modifier = Modifier.padding(start = 72.dp),
-                            color = MusicBorder,
+                            color = LocalMusicThemeColors.current.border,
                             thickness = 1.dp
                         )
                     }
@@ -180,7 +171,7 @@ private fun DiscoverHeader() {
         Column {
             Text(
                 text = "发现",
-                color = MusicTextPrimary,
+                color = LocalMusicThemeColors.current.textPrimary,
                 fontSize = 32.sp,
                 fontWeight = FontWeight.Bold,
             )
@@ -189,7 +180,7 @@ private fun DiscoverHeader() {
 
             Text(
                 text = "今天想听什么？",
-                color = MusicTextSecondary,
+                color = LocalMusicThemeColors.current.textSecondary,
                 fontSize = 14.sp
             )
         }
@@ -204,7 +195,7 @@ private fun DiscoverHeader() {
             Icon(
                 imageVector = Icons.Default.Notifications,
                 contentDescription = null,
-                tint = MusicIconMuted,
+                tint = LocalMusicThemeColors.current.iconMuted,
                 modifier = Modifier.size(21.dp)
             )
         }
@@ -223,10 +214,10 @@ private fun SearchBar(
             .fillMaxSize()
             .height(48.dp)
             .clip(RoundedCornerShape(16.dp))
-            .background(MusicSurface)
+            .background(LocalMusicThemeColors.current.surface)
             .border(
                 width = 1.dp,
-                color = MusicBorder,
+                color = LocalMusicThemeColors.current.border,
                 shape = RoundedCornerShape(16.dp)
             )
             .padding(horizontal = 14.dp)
@@ -240,13 +231,13 @@ private fun SearchBar(
         Icon(
             painter = painterResource(R.drawable.search_solid_full),
             contentDescription = "搜索",
-            tint = MusicIconMuted,
+            tint = LocalMusicThemeColors.current.iconMuted,
             modifier = Modifier.size(20.dp)
         )
         Spacer(modifier = Modifier.width(10.dp))
         Text(
             text = "搜索歌曲、歌手、歌单",
-            color = MusicTextHint,
+            color = LocalMusicThemeColors.current.textHint,
             fontSize = 15.sp,
             maxLines = 1
         )
@@ -260,7 +251,7 @@ private fun RandomPlayCard() {
             .fillMaxWidth()
             .height(116.dp)
             .clip(RoundedCornerShape(24.dp))
-            .background(MusicPrimarySoft)
+            .background(LocalMusicThemeColors.current.primarySoft)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -275,7 +266,7 @@ private fun RandomPlayCard() {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "随机播放",
-                color = MusicTextPrimary,
+                color = LocalMusicThemeColors.current.textPrimary,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -284,7 +275,7 @@ private fun RandomPlayCard() {
 
             Text(
                 text = "发现属于你的音乐惊喜",
-                color = MusicTextSecondary,
+                color = LocalMusicThemeColors.current.textSecondary,
                 fontSize = 13.sp
             )
         }
@@ -293,13 +284,13 @@ private fun RandomPlayCard() {
             modifier = Modifier
                 .size(46.dp)
                 .clip(CircleShape)
-                .background(MusicPrimary),
+                .background(LocalMusicThemeColors.current.primary),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 painter = painterResource(R.drawable.play_icon),
                 contentDescription = "播放",
-                tint = MusicSurface,
+                tint = LocalMusicThemeColors.current.surface,
                 modifier = Modifier.size(24.dp)
             )
         }
@@ -337,14 +328,14 @@ private fun SectionHeader(
     ) {
         Text(
             text = title,
-            color = MusicTextPrimary,
+            color = LocalMusicThemeColors.current.textPrimary,
             fontSize = 21.sp,
             fontWeight = FontWeight.Bold
         )
 
         Text(
             text = action,
-            color = MusicPrimary,
+            color = LocalMusicThemeColors.current.primary,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium
         )
@@ -366,7 +357,7 @@ private fun PlaylistCard(playlist: PlaylistUi) {
 
         Text(
             text = playlist.title,
-            color = MusicTextPrimary,
+            color = LocalMusicThemeColors.current.textPrimary,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
@@ -377,7 +368,7 @@ private fun PlaylistCard(playlist: PlaylistUi) {
 
         Text(
             text = playlist.desc,
-            color = MusicTextSecondary,
+            color = LocalMusicThemeColors.current.textSecondary,
             fontSize = 12.sp,
             maxLines = 1
         )
@@ -413,7 +404,7 @@ private fun SongRow(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = song.songTitle,
-                color = MusicTextPrimary,
+                color = LocalMusicThemeColors.current.textPrimary,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
@@ -424,7 +415,7 @@ private fun SongRow(
 
             Text(
                 text = song.singer,
-                color = MusicTextSecondary,
+                color = LocalMusicThemeColors.current.textSecondary,
                 fontSize = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -440,7 +431,7 @@ private fun SongRow(
                     else R.drawable.heart_regular_full
                 ),
                 contentDescription = null,
-                tint = if (song.isLoved) MusicPrimary else MusicIconMuted,
+                tint = if (song.isLoved) LocalMusicThemeColors.current.primary else LocalMusicThemeColors.current.iconMuted,
                 modifier = Modifier.size(22.dp)
             )
         }

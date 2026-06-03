@@ -11,9 +11,13 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.musicapplication.ui.appNaviagtion.AppNavigation
 import com.example.musicapplication.ui.theme.MusicApplicationTheme
+import com.example.musicapplication.ui.theme.ThemeViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import dagger.hilt.android.lifecycle.HiltViewModel
 
 
 @AndroidEntryPoint
@@ -35,7 +39,13 @@ class MainActivity : ComponentActivity() {
         externalAudioUri = parseExternalAudioUri(intent)
 
         setContent {
-            MusicApplicationTheme {
+
+            val themeViewModel: ThemeViewModel = hiltViewModel()
+            val themePreset by themeViewModel.themePreset.collectAsStateWithLifecycle()
+
+            MusicApplicationTheme(
+                themePreset = themePreset
+            ) {
                 AppNavigation(
                     context = mContext,
                     externalAudioUri = externalAudioUri,
