@@ -11,8 +11,9 @@ data class SongEntity(
     @PrimaryKey val songId: Long,
     val title: String,
     val singer: String,
-    val cover: String?,
+    val coverUrl: String?,
     val audioUrl: String?,
+    val lyricUrl: String?,
     val isLoved: Boolean,
     val updatedAt: Long
 )

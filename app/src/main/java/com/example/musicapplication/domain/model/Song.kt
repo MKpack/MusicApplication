@@ -6,5 +6,6 @@ data class Song(
     var singer: String,
     var isLoved: Boolean,
     var cover: String?,
+    var lyric: String? = null,
     var source: MusicSource?
 )

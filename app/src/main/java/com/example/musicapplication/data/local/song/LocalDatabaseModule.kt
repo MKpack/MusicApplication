@@ -35,4 +35,7 @@ object LocalDatabaseModule {
 
     @Provides
     fun provideSongListMetaDao(db: SongDatabase) = db.songListMetaDao()
+
+    @Provides
+    fun provideSongRecentPlayDao(db: SongDatabase) = db.songRecentPlayDao()
 }

@@ -70,11 +70,3 @@ fun SongSelectItem(
         }
     }
 }
-
-@Preview
-@Composable
-fun showSongSelectItem() {
-    Column {
-        SongSelectItem(Song(0, "想你的夜", "关喆", true, "uri", null))
-    }
-}

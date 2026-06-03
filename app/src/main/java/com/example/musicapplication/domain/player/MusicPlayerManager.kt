@@ -16,6 +16,8 @@ import kotlinx.coroutines.launch
 import androidx.core.net.toUri
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultDataSource
+import androidx.media3.datasource.DefaultDataSourceFactory
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import kotlinx.coroutines.Delay
@@ -37,14 +39,19 @@ class MusicPlayerManager(
 ) {
     private val TAG = "MusicPlayerManager"
 
-    private val dataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
+    // 这样就可以处理网络和本地的音频请求了
+    private val httpDataSourceFactory = OkHttpDataSource.Factory(okHttpClient)
+    private val dataSourceFactory = DefaultDataSource.Factory(
+        context,
+        httpDataSourceFactory
+    )
     private val player = ExoPlayer.Builder(context)
         .setMediaSourceFactory(
             DefaultMediaSourceFactory(dataSourceFactory)
         )
         .build()
 
-    // 播放位置
+    // 播放位置 （当前已经播放的时长）
     private val _currentPosition = MutableStateFlow(0)
     val currentPosition = _currentPosition.asStateFlow()
 
@@ -124,7 +131,7 @@ class MusicPlayerManager(
                     musicSource.url.toUri()
                 }
                 is MusicSource.Local -> {
-                    Log.d(TAG, "remote url: ${musicSource.uri}")
+                    Log.d(TAG, "local uri: ${musicSource.uri}")
                     musicSource.uri
                 }
             }

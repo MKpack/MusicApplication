@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Palette
@@ -37,7 +39,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -74,10 +78,14 @@ fun ProfileScreen(
     onClickDownload: () -> Unit,
     onClickFavorite: () -> Unit,
     onClickHistory: () -> Unit,
+    onClickSetting: () -> Unit,
+    onClickAbout: () -> Unit,
     onClickLogout: () -> Unit
 ) {
     val uiState by profileViewModel.uiState.collectAsState()
     val context = LocalContext.current
+    var isThemeExpanded by remember { mutableStateOf(false) }
+    var selectedThemeKey by remember { mutableStateOf("green") }
 
     LaunchedEffect(uiState.errorMessage) {
         val message = uiState.errorMessage ?: return@LaunchedEffect
@@ -110,10 +118,10 @@ fun ProfileScreen(
         item {
             ProfileGroup(
                 items = listOf(
-                    ProfileAction("账号资料", Icons.Default.Person, onClickAccount),
-                    ProfileAction("下载管理", Icons.Default.Download, onClickDownload),
-                    ProfileAction("喜欢的歌曲", Icons.Default.Favorite, onClickFavorite),
-                    ProfileAction("最近播放", Icons.Default.History, onClickHistory)
+                    ProfileAction("账号资料", Icons.Default.Person, onClick = onClickAccount),
+                    ProfileAction("下载管理", Icons.Default.Download, onClick = onClickDownload),
+                    ProfileAction("喜欢的歌曲", Icons.Default.Favorite, onClick = onClickFavorite),
+                    ProfileAction("最近播放", Icons.Default.History, onClick = onClickHistory)
                 )
             )
         }
@@ -121,11 +129,25 @@ fun ProfileScreen(
         item {
             ProfileGroup(
                 items = listOf(
-                    ProfileAction("主题颜色", Icons.Default.Palette),
-                    ProfileAction("设置", Icons.Default.Settings),
-                    ProfileAction("关于音乐", Icons.Default.Info),
+                    ProfileAction("主题颜色", Icons.Default.Palette, isExpanded = isThemeExpanded) {
+                        isThemeExpanded = !isThemeExpanded
+                    },
+                    ProfileAction("设置", Icons.Default.Settings, onClick = onClickSetting),
+                    ProfileAction("关于音乐", Icons.Default.Info, onClick = onClickAbout),
                     ProfileAction("退出登录", Icons.Default.Logout, onClick = { onClickLogout() })
-                )
+                ),
+                expandedContent = mapOf(
+                    0 to {
+                        ThemeColorChooser(
+                            selectedKey = selectedThemeKey,
+                            onSelected = { option ->
+                                selectedThemeKey = option.key
+                                Toast.makeText(context, "已选择${option.name}", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    }
+                ),
+                expandedIndexes = if (isThemeExpanded) setOf(0) else emptySet()
             )
         }
     }
@@ -288,12 +310,30 @@ private fun StatCard(
 private data class ProfileAction(
     val title: String,
     val icon: ImageVector,
+    val isExpanded: Boolean = false,
     val onClick: () -> Unit = {}
+)
+
+private data class ThemeColorOption(
+    val key: String,
+    val name: String,
+    val color: Color
+)
+
+private val themeColorOptions = listOf(
+    ThemeColorOption("green", "松石绿", Color(0xFF1DB954)),
+    ThemeColorOption("blue", "湖蓝", Color(0xFF0EA5E9)),
+    ThemeColorOption("rose", "玫瑰", Color(0xFFF43F5E)),
+    ThemeColorOption("amber", "琥珀", Color(0xFFF59E0B)),
+    ThemeColorOption("violet", "紫罗兰", Color(0xFF8B5CF6)),
+    ThemeColorOption("slate", "石墨", Color(0xFF64748B))
 )
 
 @Composable
 private fun ProfileGroup(
-    items: List<ProfileAction>
+    items: List<ProfileAction>,
+    expandedContent: Map<Int, @Composable () -> Unit> = emptyMap(),
+    expandedIndexes: Set<Int> = emptySet()
 ) {
     Column(
         modifier = Modifier
@@ -307,6 +347,10 @@ private fun ProfileGroup(
         items.forEachIndexed { index, item ->
             ProfileRow(item)
 
+            if (index in expandedIndexes) {
+                expandedContent[index]?.invoke()
+            }
+
             if (index != items.lastIndex) {
                 HorizontalDivider(
                     modifier = Modifier.padding(start = 58.dp),
@@ -315,6 +359,54 @@ private fun ProfileGroup(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun ThemeColorChooser(
+    selectedKey: String,
+    onSelected: (ThemeColorOption) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 58.dp, end = 16.dp, bottom = 10.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(34.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            themeColorOptions.forEach { option ->
+                val selected = option.key == selectedKey
+
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(option.color)
+                        .border(
+                            width = if (selected) 2.dp else 0.dp,
+                            color = MusicTextPrimary,
+                            shape = CircleShape
+                        )
+                        .clickable { onSelected(option) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (selected) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(MusicSurface)
+                        )
+                    }
+                }
+            }
+        }
+
     }
 }
 
@@ -364,7 +456,7 @@ private fun ProfileRow(
         )
 
         Icon(
-            imageVector = Icons.Default.KeyboardArrowRight,
+            imageVector = if (item.isExpanded) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowRight,
             contentDescription = null,
             tint = MusicIconMuted,
             modifier = Modifier.size(22.dp)

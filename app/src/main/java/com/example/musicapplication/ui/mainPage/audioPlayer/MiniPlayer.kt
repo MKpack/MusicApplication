@@ -59,7 +59,7 @@ fun MiniPlayer(
     dragModifier: Modifier = Modifier,
 ) {
     val isPlaying by playerViewModel.isPlaying.collectAsState()
-    val songValue by playerViewModel.songValue.collectAsState()
+    val songValue by playerViewModel.songUiState.collectAsState()
 //    val songTitle by playerViewModel.songTitle.collectAsState()
 //    val songCover by playerViewModel.songCover.collectAsState()
 

@@ -46,10 +46,12 @@ import com.example.musicapplication.ui.mainPage.audioPlayer.smoothProgress
 import com.example.musicapplication.ui.mainPage.home.HomeScreen
 import com.example.musicapplication.ui.mainPage.profile.ProfileRoute
 import com.example.musicapplication.ui.mainPage.profile.ProfileScreen
+import com.example.musicapplication.ui.mainPage.profile.about.AboutMusicScreen
 import com.example.musicapplication.ui.mainPage.profile.download.DownloadMusicScreen
 import com.example.musicapplication.ui.mainPage.profile.favorite.FavoriteMusicScreen
 import com.example.musicapplication.ui.mainPage.profile.recent.RecentMusicScreen
 import com.example.musicapplication.ui.mainPage.profile.account.ProfileAccountScreen
+import com.example.musicapplication.ui.mainPage.profile.setting.ProfileSettingScreen
 import com.example.musicapplication.ui.session.SessionViewModel
 import com.example.musicapplication.ui.theme.MusicBgBottom
 import com.example.musicapplication.utils.LocalAudioMetaDataReader
@@ -186,6 +188,12 @@ fun MainPage(
                         onClickHistory = {
                             navController.navigate(ProfileRoute.PROFILE_HISTORY)
                         },
+                        onClickSetting = {
+                            navController.navigate(ProfileRoute.PROFILE_SETTING)
+                        },
+                        onClickAbout = {
+                            navController.navigate(ProfileRoute.PROFILE_ABOUT)
+                        },
                         onClickLogout = {
                             onClickLogout()
                         }
@@ -211,6 +219,20 @@ fun MainPage(
                 }
                 composable(ProfileRoute.PROFILE_HISTORY) {
                     RecentMusicScreen(
+                        onBack = { navController.popBackStack() },
+                        onSongClick = { songs, index ->
+                            playerViewModel.playQueueSong(songs, index)
+                        }
+                    )
+                }
+                composable(ProfileRoute.PROFILE_SETTING) {
+                    ProfileSettingScreen(
+                        onBack = { navController.popBackStack() },
+                        onLogout = onClickLogout
+                    )
+                }
+                composable(ProfileRoute.PROFILE_ABOUT) {
+                    AboutMusicScreen(
                         onBack = { navController.popBackStack() }
                     )
                 }

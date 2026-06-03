@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,6 +33,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -57,6 +59,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
@@ -64,6 +67,7 @@ import com.example.musicapplication.R
 import com.example.musicapplication.domain.model.Song
 import com.example.musicapplication.ui.component.AppleMusicBackground
 import com.example.musicapplication.ui.theme.MusicBorder
+import com.example.musicapplication.ui.theme.MusicIconMuted
 import com.example.musicapplication.ui.theme.MusicPlayerSurface
 import com.example.musicapplication.ui.theme.MusicPrimary
 import com.example.musicapplication.ui.theme.MusicPrimarySoft
@@ -92,9 +96,10 @@ fun PlayerSheet(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
-    val song by playerViewModel.songValue.collectAsState()
-    val isPlaying by playerViewModel.isPlaying.collectAsState()
-    val colors by playerViewModel.dominantColors.collectAsState()
+    val song by playerViewModel.songUiState.collectAsStateWithLifecycle()
+    val isPlaying by playerViewModel.isPlaying.collectAsStateWithLifecycle()
+    val colors by playerViewModel.dominantColors.collectAsStateWithLifecycle()
+    // mini ----> full 进度p, change -> compose again
     val progress = remember { Animatable(0f) }
     val p = progress.value.coerceIn(0f, 1f)
 
@@ -209,7 +214,7 @@ fun PlayerSheet(
 @OptIn(UnstableApi::class)
 @Composable
 private fun AppleMusicPlayerMorph(
-    song: Song,
+    song: SongUiState,
     isPlaying: Boolean,
     progress: Float,
     screenWidth: Dp,
@@ -399,8 +404,7 @@ private fun AppleMusicPlayerMorph(
                 )
 
                 MiniContent(
-                    songTitle = song.songTitle,
-                    singer = song.singer,
+                    song = song,
                     isPlaying = isPlaying,
                     alpha = miniContentAlpha,
                     onPlayPauseClick = onPlayPauseClick,
@@ -410,9 +414,7 @@ private fun AppleMusicPlayerMorph(
                 )
 
                 FullContent(
-                    songTitle = song.songTitle,
-                    singer = song.singer,
-                    cover = song.cover,
+                    song = song,
                     isPlaying = isPlaying,
                     alpha = fullContentAlpha,
                     onPlayPauseClick = onPlayPauseClick,
@@ -433,8 +435,7 @@ private fun AppleMusicPlayerMorph(
 
 @Composable
 private fun MiniContent(
-    songTitle: String,
-    singer: String,
+    song: SongUiState,
     isPlaying: Boolean,
     alpha: Float,
     onPlayPauseClick: () -> Unit,
@@ -454,7 +455,7 @@ private fun MiniContent(
             modifier = Modifier.weight(1f)
         ) {
             Text(
-                text = songTitle,
+                text = song.songTitle,
                 color = MusicTextPrimary,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -465,7 +466,7 @@ private fun MiniContent(
             Spacer(modifier = Modifier.height(3.dp))
 
             Text(
-                text = singer,
+                text = song.singer,
                 color = MusicTextSecondary,
                 fontSize = 12.sp,
                 maxLines = 1,
@@ -500,9 +501,7 @@ private fun MiniContent(
 @OptIn(UnstableApi::class)
 @Composable
 private fun FullContent(
-    songTitle: String,
-    singer: String,
-    cover: String?,
+    song: SongUiState,
     isPlaying: Boolean,
     alpha: Float,
     onPlayPauseClick: () -> Unit,
@@ -512,6 +511,7 @@ private fun FullContent(
     playerViewModel: PlayerViewModel
 ) {
     val queue by playerViewModel.songQueue.collectAsState()
+    val queueKeys by playerViewModel.queueKeys.collectAsState()
     val currentIndex by playerViewModel.currentIndex.collectAsState()
     val playMode by playerViewModel.playMode.collectAsState()
     val panelTextAlpha by animateFloatAsState(
@@ -519,6 +519,9 @@ private fun FullContent(
         animationSpec = tween(durationMillis = 520),
         label = "playerPanelTextAlpha"
     )
+
+    val lyricsUiState by playerViewModel.lyricsUiState.collectAsState()
+    val currentPosition by playerViewModel.currentPosition.collectAsState()
 
     Column(
         modifier = Modifier
@@ -533,8 +536,8 @@ private fun FullContent(
                 .height(600.dp)
         ) {
             ArtworkTopContent(
-                songTitle = songTitle,
-                singer = singer,
+                song = song,
+                onFavoriteSong = { playerViewModel.doFavoriteEvent() },
                 onMoreClick = onMoreClick,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -544,9 +547,9 @@ private fun FullContent(
 
             PanelTopContent(
                 selectedPanel = selectedPanel,
-                songTitle = songTitle,
-                singer = singer,
+                song = song,
                 queue = queue,
+                queueKeys = queueKeys,
                 currentIndex = currentIndex,
                 playMode = playMode,
                 onShuffleClick = {
@@ -565,15 +568,20 @@ private fun FullContent(
                     playerViewModel.changePlayMode(PlayMode.Sequence)
                 },
                 onMoreClick = onMoreClick,
+                onFavoriteSong = {
+                    playerViewModel.doFavoriteEvent()
+                },
                 onSongClick = { index ->
-                    playerViewModel.playQueueSong(queue, index)
+                    playerViewModel.playQueueIndex(index)
                 },
                 onMoveSong = { from, to ->
                     playerViewModel.moveQueueSong(from, to)
                 },
                 modifier = Modifier
                     .fillMaxSize()
-                    .alpha(panelTextAlpha)
+                    .alpha(panelTextAlpha),
+                lyricsUiState = lyricsUiState,
+                currentPosition = currentPosition
             )
         }
 
@@ -591,8 +599,8 @@ private fun FullContent(
 
 @Composable
 private fun ArtworkTopContent(
-    songTitle: String,
-    singer: String,
+    song: SongUiState,
+    onFavoriteSong: () -> Unit,
     onMoreClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -602,7 +610,7 @@ private fun ArtworkTopContent(
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = songTitle,
+                text = song.songTitle,
                 color = Color.White,
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
@@ -613,7 +621,7 @@ private fun ArtworkTopContent(
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = singer,
+                text = song.singer,
                 color = Color.White.copy(alpha = 0.78f),
                 fontSize = 18.sp,
                 maxLines = 1,
@@ -621,11 +629,16 @@ private fun ArtworkTopContent(
             )
         }
 
-        IconButton(onClick = {}) {
+        IconButton(
+            enabled = !song.isFavoriteLoading,
+            onClick = {
+                onFavoriteSong()
+            }
+        ) {
             Icon(
                 painter = painterResource(R.drawable.heart_solid_full),
                 contentDescription = null,
-                tint = Color.White,
+                tint = if (song.isLoved) MusicPrimary else Color.White,
                 modifier = Modifier.size(34.dp)
             )
         }
@@ -644,18 +657,21 @@ private fun ArtworkTopContent(
 @Composable
 private fun PanelTopContent(
     selectedPanel: PlayerFullPanel,
-    songTitle: String,
-    singer: String,
+    song: SongUiState,
     queue: List<Song>,
+    queueKeys: List<String>,
     currentIndex: Int,
     playMode: PlayMode,
     onShuffleClick: () -> Unit,
     onRepeatClick: () -> Unit,
     onSequenceClick: () -> Unit,
     onMoreClick: () -> Unit,
+    onFavoriteSong: () -> Unit,
     onSongClick: (Int) -> Unit,
     onMoveSong: (Int, Int) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    lyricsUiState: LyricsUiState,
+    currentPosition: Int
 ) {
     Column(
         modifier = modifier,
@@ -664,9 +680,8 @@ private fun PanelTopContent(
         Spacer(modifier = Modifier.height(58.dp))
 
         QueueNowPlayingHeader(
-            songTitle = songTitle,
-            singer = singer,
-            cover = null,
+            song = song,
+            onFavoriteSong = onFavoriteSong,
             onMoreClick = onMoreClick
         )
 
@@ -677,7 +692,9 @@ private fun PanelTopContent(
                 LyricsPanel(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(355.dp)
+                        .height(355.dp),
+                    lyricsUiState = lyricsUiState,
+                    currentPosition = currentPosition
                 )
             }
 
@@ -695,6 +712,7 @@ private fun PanelTopContent(
 
                 QueuePanel(
                     queue = queue,
+                    queueKeys = queueKeys,
                     currentIndex = currentIndex,
                     onSongClick = onSongClick,
                     onMoveSong = { from, to ->
@@ -797,242 +815,10 @@ private fun PlaybackFooter(
     )
 }
 
-@OptIn(UnstableApi::class)
-@Composable
-private fun LyricsFullContent(
-    songTitle: String,
-    singer: String,
-    cover: String?,
-    isPlaying: Boolean,
-    onPlayPauseClick: () -> Unit,
-    onPreviousClick: () -> Unit,
-    onNextClick: () -> Unit,
-    selectedPanel: PlayerFullPanel,
-    onPanelChange: (PlayerFullPanel) -> Unit,
-    playerViewModel: PlayerViewModel
-) {
-    val playMode by playerViewModel.playMode.collectAsState()
-
-    Spacer(modifier = Modifier.height(62.dp))
-
-    QueueNowPlayingHeader(
-        songTitle = songTitle,
-        singer = singer,
-        cover = cover
-    )
-
-    Spacer(modifier = Modifier.height(22.dp))
-
-    PlaybackModeRow(
-        playMode = playMode,
-        onShuffleClick = {
-            playerViewModel.changePlayMode(PlayMode.Shuffle)
-        },
-        onRepeatClick = {
-            playerViewModel.changePlayMode(
-                if (playMode == PlayMode.Repeat) {
-                    PlayMode.RepeatOne
-                } else {
-                    PlayMode.Repeat
-                }
-            )
-        },
-        onSequenceClick = {
-            playerViewModel.changePlayMode(PlayMode.Sequence)
-        }
-    )
-
-    Spacer(modifier = Modifier.height(22.dp))
-
-    LyricsPanel(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(355.dp)
-    )
-
-    Spacer(modifier = Modifier.height(18.dp))
-
-    PlayerProgressBar(playerViewModel)
-
-    Spacer(modifier = Modifier.height(28.dp))
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(
-            onClick = onPreviousClick,
-            modifier = Modifier.size(78.dp)
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.backward_solid_full),
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(50.dp)
-            )
-        }
-
-        IconButton(
-            onClick = onPlayPauseClick,
-            modifier = Modifier.size(84.dp)
-        ) {
-            Icon(
-                painter = painterResource(
-                    if (isPlaying) R.drawable.pause_icon else R.drawable.play_icon
-                ),
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(68.dp)
-            )
-        }
-
-        IconButton(
-            onClick = onNextClick,
-            modifier = Modifier.size(78.dp)
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.forward_solid_full),
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(50.dp)
-            )
-        }
-    }
-
-    Spacer(modifier = Modifier.height(22.dp))
-
-    PlayerPanelSwitcher(
-        selectedPanel = selectedPanel,
-        onPanelChange = onPanelChange
-    )
-}
-
-@OptIn(UnstableApi::class)
-@Composable
-private fun QueueFullContent(
-    songTitle: String,
-    singer: String,
-    cover: String?,
-    isPlaying: Boolean,
-    queue: List<Song>,
-    currentIndex: Int,
-    onPlayPauseClick: () -> Unit,
-    onPreviousClick: () -> Unit,
-    onNextClick: () -> Unit,
-    onSongClick: (Int) -> Unit,
-    selectedPanel: PlayerFullPanel,
-    onPanelChange: (PlayerFullPanel) -> Unit,
-    playerViewModel: PlayerViewModel
-) {
-    val playMode by playerViewModel.playMode.collectAsState()
-
-    Spacer(modifier = Modifier.height(62.dp))
-
-    QueueNowPlayingHeader(
-        songTitle = songTitle,
-        singer = singer,
-        cover = cover
-    )
-
-    Spacer(modifier = Modifier.height(22.dp))
-
-    PlaybackModeRow(
-        playMode = playMode,
-        onShuffleClick = {
-            playerViewModel.changePlayMode(PlayMode.Shuffle)
-        },
-        onRepeatClick = {
-            playerViewModel.changePlayMode(
-                if (playMode == PlayMode.Repeat) {
-                    PlayMode.RepeatOne
-                } else {
-                    PlayMode.Repeat
-                }
-            )
-        },
-        onSequenceClick = {
-            playerViewModel.changePlayMode(PlayMode.Sequence)
-        }
-    )
-
-    Spacer(modifier = Modifier.height(22.dp))
-
-    QueuePanel(
-        queue = queue,
-        currentIndex = currentIndex,
-        onSongClick = onSongClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(355.dp),
-        onMoveSong = { from, to ->
-
-        }
-    )
-
-    Spacer(modifier = Modifier.height(18.dp))
-
-    PlayerProgressBar(playerViewModel)
-
-    Spacer(modifier = Modifier.height(28.dp))
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(
-            onClick = onPreviousClick,
-            modifier = Modifier.size(78.dp)
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.backward_solid_full),
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(50.dp)
-            )
-        }
-
-        IconButton(
-            onClick = onPlayPauseClick,
-            modifier = Modifier.size(84.dp)
-        ) {
-            Icon(
-                painter = painterResource(
-                    if (isPlaying) R.drawable.pause_icon else R.drawable.play_icon
-                ),
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(68.dp)
-            )
-        }
-
-        IconButton(
-            onClick = onNextClick,
-            modifier = Modifier.size(78.dp)
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.forward_solid_full),
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(50.dp)
-            )
-        }
-    }
-
-    Spacer(modifier = Modifier.height(22.dp))
-
-    PlayerPanelSwitcher(
-        selectedPanel = selectedPanel,
-        onPanelChange = onPanelChange
-    )
-}
-
 @Composable
 private fun QueueNowPlayingHeader(
-    songTitle: String,
-    singer: String,
-    cover: String?,
+    song: SongUiState,
+    onFavoriteSong: () -> Unit,
     onMoreClick: () -> Unit = {}
 ) {
     Row(
@@ -1043,7 +829,7 @@ private fun QueueNowPlayingHeader(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = songTitle,
+                text = song.songTitle,
                 color = Color.White,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
@@ -1054,7 +840,7 @@ private fun QueueNowPlayingHeader(
             Spacer(modifier = Modifier.height(5.dp))
 
             Text(
-                text = singer,
+                text = song.singer,
                 color = Color.White.copy(alpha = 0.58f),
                 fontSize = 18.sp,
                 maxLines = 1,
@@ -1062,11 +848,17 @@ private fun QueueNowPlayingHeader(
             )
         }
 
-        IconButton(onClick = {}) {
+        IconButton(
+            enabled = !song.isFavoriteLoading && song.canFavorite,
+            onClick = onFavoriteSong
+        ) {
             Icon(
-                painter = painterResource(R.drawable.heart_solid_full),
+                painter = painterResource(
+                    if (song.isLoved) R.drawable.heart_solid_full
+                    else R.drawable.heart_regular_full
+                ),
                 contentDescription = null,
-                tint = Color.White,
+                tint = if (song.isLoved) MusicPrimary else Color.White,
                 modifier = Modifier.size(34.dp)
             )
         }
@@ -1305,35 +1097,77 @@ private fun PlaybackModeButton(
 
 @Composable
 private fun LyricsPanel(
-    modifier: Modifier = Modifier
+    lyricsUiState: LyricsUiState,
+    modifier: Modifier = Modifier,
+    currentPosition: Int
 ) {
-    val lines = remember {
-        listOf(
-            "歌词即将显示在这里",
-            "当前先完成全屏播放器 UI",
-            "接入歌词接口后",
-            "这里可以按播放进度高亮当前行",
-            "并支持上下滚动查看完整歌词"
-        )
-    }
+    val lines = lyricsUiState.lines
 
     Box(
-        modifier = modifier
-            .padding(horizontal = 0.dp, vertical = 0.dp)
+        modifier = modifier,
+        contentAlignment = Alignment.TopStart
     ) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            itemsIndexed(lines) { index, line ->
-                Text(
-                    text = line,
-                    color = if (index == 1) Color.White else Color.White.copy(alpha = 0.48f),
-                    fontSize = if (index == 1) 22.sp else 19.sp,
-                    fontWeight = if (index == 1) FontWeight.Bold else FontWeight.SemiBold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+        when {
+            lyricsUiState.isLoading -> {
+                CircularProgressIndicator(
+                    color = Color.White,
+                    strokeWidth = 2.5.dp,
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 28.dp)
+                        .size(28.dp)
                 )
+            }
+
+            lines.isEmpty() -> {
+                Text(
+                    text = "暂无歌词",
+                    color = Color.White.copy(alpha = 0.7f),
+                    fontSize = 25.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(top = 28.dp)
+                )
+            }
+
+            else -> {
+                val currentIndex = lines.indexOfLast {
+                    it.timeSeconds <= currentPosition
+                }.coerceAtLeast(0)
+                val lazyListState = rememberLazyListState()
+                val density = LocalDensity.current
+                val centerOffset = with(density) { 150.dp.roundToPx() }
+
+                LaunchedEffect(currentIndex, lines.size) {
+                    lazyListState.animateScrollToItem(
+                        index = currentIndex,
+                        scrollOffset = -centerOffset
+                    )
+                }
+
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    state = lazyListState,
+                    contentPadding = PaddingValues(vertical = 150.dp),
+                    verticalArrangement = Arrangement.spacedBy(18.dp)
+                ) {
+                    itemsIndexed(lines) { index, line ->
+                        val selected = index == currentIndex
+
+                        Text(
+                            text = line.text,
+                            color = if (selected) {
+                                Color.White
+                            } else {
+                                Color.White.copy(alpha = 0.45f)
+                            },
+                            fontSize = if (selected) 28.sp else 23.sp,
+                            lineHeight = if (selected) 35.sp else 30.sp,
+                            fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Bold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
         }
     }
@@ -1342,6 +1176,7 @@ private fun LyricsPanel(
 @Composable
 private fun QueuePanel(
     queue: List<Song>,
+    queueKeys: List<String>,
     currentIndex: Int,
     onSongClick: (Int) -> Unit,
     onMoveSong: (Int, Int) -> Unit,
@@ -1392,10 +1227,11 @@ private fun QueuePanel(
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 itemsIndexed(queue,
-                    key = { _, song -> song.songId }) { index, song ->
+                    key = { index, song -> queueKeys.getOrNull(index) ?: "${song.songId}-${song.source}-$index" }) { index, song ->
+                    val itemKey = queueKeys.getOrNull(index) ?: "${song.songId}-${song.source}-$index"
                     ReorderableItem(
                         reorderableLazyListState,
-                        key = song.songId
+                        key = itemKey
                     ) {
                         QueueSongRow(
                             song = song,

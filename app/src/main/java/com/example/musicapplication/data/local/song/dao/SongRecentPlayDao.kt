@@ -23,6 +23,9 @@ interface SongRecentPlayDao {
     @Insert
     suspend fun insertRecentSong(song: SongRecentPlayEntity)
 
+    @Query("UPDATE recent_song_play SET isLoved = :isLoved WHERE songId = :songId")
+    suspend fun updateLoved(songId: Long, isLoved: Boolean)
+
     @Query("""
         DELETE FROM recent_song_play
         WHERE id NOT IN (

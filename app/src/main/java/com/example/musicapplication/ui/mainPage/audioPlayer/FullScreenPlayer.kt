@@ -71,7 +71,7 @@ fun FullScreenPlayer(
 //    val songSinger by playerViewModel.songSinger.collectAsState()
 //    val songBitmap by playerViewModel.songCover.collectAsState()
 //    val songIsLove by playerViewModel.songIsLove.collectAsState()
-    val songValue by playerViewModel.songValue.collectAsState()
+    val songValue by playerViewModel.songUiState.collectAsState()
     val isPlaying by playerViewModel.isPlaying.collectAsState()
     LaunchedEffect(Unit) {
         playerViewModel.updateColorsFromSongCover()
@@ -131,7 +131,7 @@ fun FullScreenPlayer(
                         )
                     }
                     IconButton(onClick = {
-                        playerViewModel.updateLoveStatus()
+                        playerViewModel.doFavoriteEvent()
                     }) {
                         Icon(
                             painter = painterResource(R.drawable.heart_solid_full),

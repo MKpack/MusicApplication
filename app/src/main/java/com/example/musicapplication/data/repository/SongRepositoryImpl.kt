@@ -106,7 +106,9 @@ class SongRepositoryImpl @Inject constructor(
         val now = System.currentTimeMillis()
 
         // 先给他值，如果不成功再退回
-        songDao.updateLoved(songId, false)
+        songDao.updateLoved(songId, true)
+        // 更新一下recent play表状态
+        songRecentPlayDao.updateLoved(songId, true)
         try {
             val response = songApi.favoriteSong(songId)
 
@@ -123,15 +125,18 @@ class SongRepositoryImpl @Inject constructor(
                             updatedAt = now
                         )
                     )
+                    songRecentPlayDao.updateLoved(songId, true)
                 }
                 return RepositoryWorkResult.Success(Unit)
             } else {
                 songDao.updateLoved(songId, oldLoved)
+                songRecentPlayDao.updateLoved(songId, oldLoved)
                 return RepositoryWorkResult.Failure(response.message)
             }
         } catch (e: Exception) {
             Log.e(TAG, "favoriteSong: ${e.message}", e)
             songDao.updateLoved(songId, oldLoved)
+            songRecentPlayDao.updateLoved(songId, oldLoved)
             return RepositoryWorkResult.Failure("无法连接服务器", throwable = e)
         }
     }
@@ -144,7 +149,8 @@ class SongRepositoryImpl @Inject constructor(
         val now = System.currentTimeMillis()
 
         // 先给他值，如果不成功再退回
-        songDao.updateLoved(songId, true)
+        songDao.updateLoved(songId, false)
+        songRecentPlayDao.updateLoved(songId, false)
         try {
             val response = songApi.unFavoriteSong(songId)
 
@@ -152,15 +158,18 @@ class SongRepositoryImpl @Inject constructor(
                 db.withTransaction {
                     songDao.upsertSong(response.data.toEntity())
                     songListDao.deleteItem(SongListKey.Loved.value, songId)
+                    songRecentPlayDao.updateLoved(songId, false)
                 }
                 return RepositoryWorkResult.Success(Unit)
             } else {
                 songDao.updateLoved(songId, oldLoved)
+                songRecentPlayDao.updateLoved(songId, oldLoved)
                 return RepositoryWorkResult.Failure(response.message)
             }
         } catch (e: Exception) {
             Log.e(TAG, "favoriteSong: ${e.message}", e)
             songDao.updateLoved(songId, oldLoved)
+            songRecentPlayDao.updateLoved(songId, oldLoved)
             return RepositoryWorkResult.Failure("无法连接服务器", throwable = e)
         }
     }
