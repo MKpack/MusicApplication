@@ -6,6 +6,7 @@ import android.util.Log
 import com.example.musicapplication.data.common.RepositoryWorkResult
 import com.example.musicapplication.data.local.profile.ProfileStore
 import com.example.musicapplication.data.remote.api.ProfileApi
+import com.example.musicapplication.data.remote.api.UserStatApi
 import com.example.musicapplication.data.remote.dto.request.ProfileRequest
 import com.example.musicapplication.data.remote.dto.response.ProfileResponse
 import com.example.musicapplication.domain.model.UserProfile
@@ -13,10 +14,8 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -25,6 +24,7 @@ import javax.inject.Inject
 
 class ProfileRepositoryImpl @Inject constructor(
     private val profileApi: ProfileApi,
+    private val userStatApi: UserStatApi,
     @ApplicationContext val context: Context,
     private val profileStore: ProfileStore
 ) : ProfileRepository {

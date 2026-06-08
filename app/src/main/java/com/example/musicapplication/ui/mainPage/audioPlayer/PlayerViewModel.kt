@@ -10,7 +10,7 @@ import androidx.palette.graphics.Palette
 import com.example.musicapplication.R
 import com.example.musicapplication.domain.model.Song
 import com.example.musicapplication.domain.model.MusicSource
-import com.example.musicapplication.domain.player.MusicPlayerManager
+import com.example.musicapplication.domain.player.MediaControllerManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,9 +20,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import androidx.core.net.toUri
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import com.example.musicapplication.data.common.RepositoryWorkResult
 import com.example.musicapplication.data.repository.SongRepository
+import com.example.musicapplication.data.repository.UserStatRepository
 import com.example.musicapplication.utils.LrcParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.asStateFlow
@@ -43,19 +45,15 @@ enum class PlayMode {
 class PlayerViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val okHttpClient: OkHttpClient,
-    private val songRepository: SongRepository
+    private val songRepository: SongRepository,
+    private val userStatRepository: UserStatRepository,
+    private val mediaControllerManager: MediaControllerManager
 ): ViewModel() {
     private val TAG = "PlayerViewModel"
-    // 具体播放能力由 MusicPlayerManager 处理；ViewModel 只保存 UI 状态和队列规则。
-    private val playerManager = MusicPlayerManager(
-        context,
-        okHttpClient,
-        onMusicEnded = { playNext() }
-    )
-    //监听playerManager.isPlaying 初始值false 懒加载(flow -> stateflow)
-    val isPlaying = playerManager.isPlaying
-    val currentPosition = playerManager.currentPosition
-    val duration = playerManager.duration.stateIn(viewModelScope, SharingStarted.Lazily, 0)
+    // 具体播放能力由 PlaybackService 中的 ExoPlayer 处理；ViewModel 只保存 UI 状态和队列规则。
+    val isPlaying = mediaControllerManager.isPlaying
+    val currentPosition = mediaControllerManager.currentPosition
+    val duration = mediaControllerManager.duration.stateIn(viewModelScope, SharingStarted.Lazily, 0)
 
     private val _dominantColors = MutableStateFlow(listOf(Color.Black, Color.DarkGray))
     val dominantColors: StateFlow<List<Color>> = _dominantColors
@@ -100,9 +98,24 @@ class PlayerViewModel @Inject constructor(
     val currentIndex = _currentIndex.asStateFlow()
 
     // indictor progress 进度
-    val currentProgress = playerManager.currentProgress.stateIn(viewModelScope, SharingStarted.Lazily, 0f)
+    val currentProgress = mediaControllerManager.currentProgress.stateIn(viewModelScope, SharingStarted.Lazily, 0f)
 
-    val isDragging = playerManager.isDragging.stateIn(viewModelScope, SharingStarted.Lazily, false)
+    val isDragging = mediaControllerManager.isDragging.stateIn(viewModelScope, SharingStarted.Lazily, false)
+
+    init {
+        mediaControllerManager.connect()
+        applyMediaRepeatMode(_playMode.value)
+        viewModelScope.launch {
+            mediaControllerManager.playbackEndedEvents.collect {
+                playNext()
+            }
+        }
+        viewModelScope.launch {
+            mediaControllerManager.mediaItemTransitionEvents.collect { index ->
+                handleControllerMediaItemTransition(index)
+            }
+        }
+    }
 
     //背景高糊色调
     private fun updateColorsFromBitmap(bitmap: Bitmap) {
@@ -114,22 +127,13 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
-    /**
-     * 循环和单曲循环的切换
-     */
-    fun changeRepeatMode() {
-        _playMode.value = when (_playMode.value) {
-            PlayMode.Repeat -> PlayMode.RepeatOne
-            else -> PlayMode.Repeat
-        }
-    }
 
-    //暴露给UI层进行调用
+    // 暴露给UI层进行调用
     fun updateColorsFromSongCover() {
         viewModelScope.launch {
             val cover = _song.value.cover
             when {
-                //本地uri/文件路径
+                // 本地uri/文件路径
                 cover != null -> {
                     try {
                         val uri = cover.toUri()
@@ -143,7 +147,7 @@ class PlayerViewModel @Inject constructor(
                         updateColorsFromBitmap(bitmap)
                     }
                 }
-                //cover 值为空， 使用默认cover
+                // cover 值为空， 使用默认cover
                 else -> {
                     val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.default_cover)
                     updateColorsFromBitmap(bitmap)
@@ -165,11 +169,45 @@ class PlayerViewModel @Inject constructor(
                 }
             }
         }
+        applyMediaRepeatMode(_playMode.value)
+    }
+
+    private fun applyMediaRepeatMode(playMode: PlayMode) {
+        val repeatMode = when (playMode) {
+            PlayMode.Repeat -> Player.REPEAT_MODE_ALL
+            PlayMode.RepeatOne -> Player.REPEAT_MODE_ONE
+            PlayMode.Sequence,
+            PlayMode.Shuffle -> Player.REPEAT_MODE_OFF
+        }
+        mediaControllerManager.setRepeatMode(repeatMode)
     }
 
     // 逻辑层和ui层分离
-    fun updateProgress(tmp: Float) = playerManager.updatePosition(tmp)
+    fun updateProgress(tmp: Float) = mediaControllerManager.updatePosition(tmp)
 
+    /**
+     * 增加音乐播放次数
+     */
+    private fun increaseSongPlayCountIfRemote(song: Song) {
+        val source = song.source
+
+        if (source !is MusicSource.Remote) return
+        if (song.songId <= 0) return
+
+        viewModelScope.launch {
+            songRepository.increaseSongPlayCount(song.songId)
+        }
+    }
+
+    private fun increaseUserPlayCount() {
+        viewModelScope.launch {
+            userStatRepository.increaseUserStatPlayCount()
+        }
+    }
+
+    /**
+     * 收藏的点击事件
+     */
     fun doFavoriteEvent() {
         val song = _song.value
         if (_songUiState.value.isFavoriteLoading || !_songUiState.value.canFavorite) return
@@ -265,6 +303,16 @@ class PlayerViewModel @Inject constructor(
         _queueKeys.value = newKeys
 
         _currentIndex.value = newKeys.indexOf(currentKey).coerceAtLeast(0)
+        if (_playMode.value != PlayMode.Shuffle) {
+            _originalQueue.value = newQueue
+            _originalQueueKeys.value = newKeys
+        }
+        mediaControllerManager.moveQueueItem(
+            fromIndex = fromIndex,
+            toIndex = toIndex,
+            songs = newQueue,
+            currentIndex = _currentIndex.value
+        )
     }
 
     // 外部页面点击某个列表时调用。这里会创建一个新的播放队列，并给队列每一项生成稳定 key。
@@ -283,12 +331,14 @@ class PlayerViewModel @Inject constructor(
             _songQueue.value = shuffledQueue.map { it.first }
             _queueKeys.value = shuffledQueue.map { it.second }
             _currentIndex.value = 0
-            playSong(currentItem.first)
+            mediaControllerManager.playQueue(_songQueue.value, 0)
+            onSongStarted(currentItem.first)
         } else {
             _songQueue.value = songs
             _queueKeys.value = queueKeys
             _currentIndex.value = index
-            playSong(songs[index])
+            mediaControllerManager.playQueue(songs, index)
+            onSongStarted(songs[index])
         }
     }
 
@@ -310,6 +360,7 @@ class PlayerViewModel @Inject constructor(
         return listOf(currentSong) + rest
     }
 
+    // 随机排序
     private fun enableShuffleMode() {
         // 优先基于原始队列打乱；如果没有原始队列，就用当前队列。
         val baseQueue = _originalQueue.value.ifEmpty {
@@ -338,16 +389,26 @@ class PlayerViewModel @Inject constructor(
             songs = pairedQueue,
             currentSong = currentItem
         )
+        val oldKeys = _queueKeys.value
+        val shuffledSongs = shuffledQueue.map { it.first }
+        val shuffledKeys = shuffledQueue.map { it.second }
 
         _playMode.value = PlayMode.Shuffle
-        _songQueue.value = shuffledQueue.map { it.first }
-        _queueKeys.value = shuffledQueue.map { it.second }
+        applyMediaRepeatMode(PlayMode.Shuffle)
+        _songQueue.value = shuffledSongs
+        _queueKeys.value = shuffledKeys
 
         if (currentItem == null) {
             _currentIndex.value = 0
-            playSong(shuffledQueue[0].first)
+            mediaControllerManager.playQueue(_songQueue.value, 0)
+            onSongStarted(shuffledQueue[0].first)
         } else {
             _currentIndex.value = 0
+            mediaControllerManager.reorderQueueByMoves(
+                moves = buildQueueMoveOperations(oldKeys, shuffledKeys),
+                songs = shuffledSongs,
+                currentIndex = 0
+            )
         }
     }
 
@@ -358,12 +419,41 @@ class PlayerViewModel @Inject constructor(
         val currentKey = _queueKeys.value.getOrNull(_currentIndex.value)
 
         _playMode.value = nextMode
+        applyMediaRepeatMode(nextMode)
 
         if (originalQueue.isEmpty()) return
 
+        val oldKeys = _queueKeys.value
         _songQueue.value = originalQueue
         _queueKeys.value = originalKeys
         _currentIndex.value = originalKeys.indexOf(currentKey).coerceAtLeast(0)
+        mediaControllerManager.reorderQueueByMoves(
+            moves = buildQueueMoveOperations(oldKeys, originalKeys),
+            songs = originalQueue,
+            currentIndex = _currentIndex.value
+        )
+    }
+
+    private fun buildQueueMoveOperations(
+        currentKeys: List<String>,
+        targetKeys: List<String>
+    ): List<Pair<Int, Int>> {
+        if (currentKeys.size != targetKeys.size) return emptyList()
+
+        val workingKeys = currentKeys.toMutableList()
+        val moves = mutableListOf<Pair<Int, Int>>()
+
+        targetKeys.forEachIndexed { targetIndex, targetKey ->
+            val fromIndex = workingKeys.indexOf(targetKey)
+            if (fromIndex == -1) return@forEachIndexed
+            if (fromIndex != targetIndex) {
+                val key = workingKeys.removeAt(fromIndex)
+                workingKeys.add(targetIndex, key)
+                moves += fromIndex to targetIndex
+            }
+        }
+
+        return moves
     }
 
     private fun loadLyrics(lyricUrl: String?) {
@@ -408,16 +498,35 @@ class PlayerViewModel @Inject constructor(
         }
     }
 
+    /**
+     * 播放音乐
+     */
     fun playSong(song: Song) {
         song.source ?: return
+        mediaControllerManager.playSong(song)
+        onSongStarted(song)
+    }
+
+    private fun onSongStarted(song: Song) {
         _song.value = song
         _songUiState.value = song.toSongUiState()
-        playerManager.playMusic(song.source)
         loadLyrics(song.lyric)
+        // 增加音乐播放次数
+        increaseSongPlayCountIfRemote(song)
+        // 增加用户播放次数
+        increaseUserPlayCount()
         // 只要开始播放，就追加一条最近播放记录；同一首歌重复播放也会重复记录。
         viewModelScope.launch {
             songRepository.addRecentPlay(song)
         }
+    }
+
+    private fun handleControllerMediaItemTransition(index: Int) {
+        if (index !in _songQueue.value.indices) return
+        if (index == _currentIndex.value) return
+
+        _currentIndex.value = index
+        onSongStarted(_songQueue.value[index])
     }
 
     // 队列内部点击歌曲时调用，只改变当前 index，不重新创建队列和 key。
@@ -425,7 +534,8 @@ class PlayerViewModel @Inject constructor(
         val songs = _songQueue.value
         if (index !in songs.indices) return
         _currentIndex.value = index
-        playSong(songs[index])
+        mediaControllerManager.playQueueIndex(index)
+        onSongStarted(songs[index])
     }
 
     // 下一首
@@ -433,25 +543,27 @@ class PlayerViewModel @Inject constructor(
         val songs = _songQueue.value
         val index = _currentIndex.value
         if (songs.isEmpty()) return
+        if (index !in songs.indices) return
 
         val nextIndex = when(_playMode.value) {
             PlayMode.Repeat -> {
                 if (index + 1 < songs.size) index + 1 else 0
             }
             PlayMode.RepeatOne -> {
-                index
+                if (index + 1 < songs.size) index + 1 else 0
             }
             PlayMode.Shuffle,
             PlayMode.Sequence -> {
                 if (index + 1 < songs.size) index + 1
                 else {
-                    playerManager.pauseAtStart()
+                    mediaControllerManager.pauseAtStart()
                     return
                 }
             }
         }
         _currentIndex.value = nextIndex
-        playSong(songs[nextIndex])
+        mediaControllerManager.playQueueIndex(nextIndex)
+        onSongStarted(songs[nextIndex])
     }
 
     private fun nextQueueKey(song: Song): String {
@@ -469,7 +581,7 @@ class PlayerViewModel @Inject constructor(
 
 
         val nextIndex = when (_playMode.value) {
-            PlayMode.RepeatOne -> index
+            PlayMode.RepeatOne,
             PlayMode.Repeat -> {
                 if (index - 1 >= 0) index - 1 else songs.size - 1
             }
@@ -483,21 +595,20 @@ class PlayerViewModel @Inject constructor(
             }
         }
         _currentIndex.value = nextIndex
-        playSong(songs[nextIndex])
+        mediaControllerManager.playQueueIndex(nextIndex)
+        onSongStarted(songs[nextIndex])
     }
 
     // 暂停
-    fun pause() = playerManager.pause()
+    fun pause() = mediaControllerManager.pause()
     // 继续
-    fun resume() = playerManager.resume()
+    fun resume() = mediaControllerManager.resume()
     // 跳转指定位置
-    fun seekTo() = playerManager.seekTo()
+    fun seekTo() = mediaControllerManager.seekTo()
 
-    fun changeDraggingStatus(tmp: Boolean) = playerManager.isDraggingStatusChange(tmp)
+    fun changeDraggingStatus(tmp: Boolean) = mediaControllerManager.isDraggingStatusChange(tmp)
 
-    // release
     override fun onCleared() {
-        playerManager.release()
         super.onCleared()
     }
 }

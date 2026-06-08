@@ -1,5 +1,6 @@
 package com.example.musicapplication.ui.mainPage.profile.setting
 
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -42,20 +44,30 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 
 @Composable
 fun ProfileSettingScreen(
     onBack: () -> Unit,
     onLogout: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    profileSettingViewModel: ProfileSettingViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     var autoRecordRecent by remember { mutableStateOf(true) }
     var rememberProgress by remember { mutableStateOf(false) }
+
+    LaunchedEffect(profileSettingViewModel) {
+        profileSettingViewModel.message.collect { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     LazyColumn(
         modifier = modifier
@@ -116,7 +128,7 @@ fun ProfileSettingScreen(
                         title = "清理图片缓存",
                         subtitle = "释放封面与头像缓存空间",
                         icon = Icons.Default.CleaningServices,
-                        onClick = { }
+                        onClick = { profileSettingViewModel.clearArtworkCache() }
                     )
                 )
             )

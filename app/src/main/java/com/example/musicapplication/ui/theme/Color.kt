@@ -1,5 +1,8 @@
 package com.example.musicapplication.ui.theme
 
+/**
+ * 已弃用
+ */
 import androidx.compose.ui.graphics.Color
 
 //val Purple80 = Color(0xFFD0BCFF)

@@ -14,11 +14,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -27,10 +30,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshState
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,7 +49,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -58,6 +68,7 @@ private data class PlaylistUi(
     val desc: String,
     val cover: String?
 )
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     modifier: Modifier,
@@ -66,6 +77,7 @@ fun HomeScreen(
     homeScreenViewModel: HomeScreenViewModel = hiltViewModel()
 ) {
     val songList by homeScreenViewModel.songListUiState.collectAsState()
+    val pullToRefreshState = rememberPullToRefreshState()
 
     LaunchedEffect(songList.errorMsg) {
         val message = songList.errorMsg ?: return@LaunchedEffect
@@ -79,84 +91,149 @@ fun HomeScreen(
         PlaylistUi("学习专注", "42 首歌曲", null)
     )
 
-
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        LocalMusicThemeColors.current.bgTop,
-                        LocalMusicThemeColors.current.bgBottom
-                    )
-                )
-            ),
-        contentPadding = PaddingValues(
-            start = 18.dp,
-            end = 18.dp,
-            top = 12.dp,
-            bottom = 150.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(22.dp),
+    PullToRefreshBox(
+        isRefreshing = songList.isRefreshing,
+        onRefresh = {
+            homeScreenViewModel.refreshHotSongs(isPullToRefresh = true)
+        },
+        modifier = modifier.fillMaxSize(),
+        state = pullToRefreshState,
+        indicator = {
+            DiscoverRefreshIndicator(
+                state = pullToRefreshState,
+                isRefreshing = songList.isRefreshing,
+                modifier = Modifier.align(Alignment.TopCenter)
+            )
+        }
     ) {
-        item {
-            DiscoverHeader()
-        }
-
-        item {
-            // TODO 新增一个搜索页
-            SearchBar({})
-        }
-
-        item {
-            // TODO
-            RandomPlayCard()
-        }
-
-        item {
-            SectionHeader(title = "推荐歌单", action = "查看全部")
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                items(playlists) { playlist ->
-                    PlaylistCard(playlist = playlist)
-                }
-            }
-        }
-
-        item {
-            SectionHeader(title = "热门歌曲", action = "更多")
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(LocalMusicThemeColors.current.surface)
-                    .padding(vertical = 6.dp)
-            ) {
-                songList.songs.forEachIndexed { index, song ->
-                    SongRow(
-                        song = song,
-                        onClick = {
-                            onSongClick(songList.songs, index)
-                        },
-                        onFavoriteSong = {
-                            homeScreenViewModel.doFavoriteEvent(index)
-                        }
-                    )
-
-                    if (index != songList.songs.lastIndex) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 72.dp),
-                            color = LocalMusicThemeColors.current.border,
-                            thickness = 1.dp
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            LocalMusicThemeColors.current.bgTop,
+                            LocalMusicThemeColors.current.bgBottom
                         )
+                    )
+                ),
+            contentPadding = PaddingValues(
+                start = 18.dp,
+                end = 18.dp,
+                top = 12.dp,
+                bottom = 150.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(22.dp),
+        ) {
+            item {
+                DiscoverHeader()
+            }
+
+            item {
+                // TODO 新增一个搜索页
+                SearchBar({})
+            }
+
+            item {
+                // TODO
+                RandomPlayCard()
+            }
+
+            item {
+                SectionHeader(title = "推荐歌单", action = "查看全部")
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    items(playlists) { playlist ->
+                        PlaylistCard(playlist = playlist)
                     }
                 }
             }
+
+            item {
+                SectionHeader(title = "热门歌曲", action = "更多")
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(LocalMusicThemeColors.current.surface)
+                        .padding(vertical = 6.dp)
+                ) {
+                    songList.songs.forEachIndexed { index, song ->
+                        SongRow(
+                            song = song,
+                            onClick = {
+                                onSongClick(songList.songs, index)
+                            },
+                            onFavoriteSong = {
+                                homeScreenViewModel.doFavoriteEvent(index)
+                            }
+                        )
+
+                        if (index != songList.songs.lastIndex) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 72.dp),
+                                color = LocalMusicThemeColors.current.border,
+                                thickness = 1.dp
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DiscoverRefreshIndicator(
+    state: PullToRefreshState,
+    isRefreshing: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val density = LocalDensity.current
+    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val offsetY = with(density) {
+        val hiddenY = -(statusBarTop + 42.dp).toPx()
+        val shownY = (statusBarTop + 18.dp).toPx()
+        val progress = state.distanceFraction.coerceIn(0f, 1f)
+
+        if (isRefreshing) {
+            shownY
+        } else {
+            hiddenY + (shownY - hiddenY) * progress
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .graphicsLayer {
+                translationY = offsetY
+                alpha = if (isRefreshing || state.distanceFraction > 0f) 1f else 0f
+            }
+            .size(36.dp)
+            .clip(CircleShape)
+            .background(LocalMusicThemeColors.current.surface)
+            .border(1.dp, LocalMusicThemeColors.current.border, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        if (isRefreshing) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(26.dp),
+                color = LocalMusicThemeColors.current.primary,
+                strokeWidth = 2.5.dp
+            )
+        } else {
+            CircularProgressIndicator(
+                progress = { state.distanceFraction.coerceIn(0f, 1f) },
+                color = LocalMusicThemeColors.current.primary,
+                strokeWidth = 3.dp,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }
@@ -437,7 +514,6 @@ private fun SongRow(
         }
     }
 }
-
 
 
 

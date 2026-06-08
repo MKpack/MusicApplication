@@ -49,12 +49,13 @@ class FavoriteMusicViewModel @Inject constructor(
         }
     }
 
-    fun refreshLovedSongs() {
+    fun refreshLovedSongs(isPullToRefresh: Boolean = false) {
         viewModelScope.launch {
             val state = _songListUiState.value
             if (state.isLoading) return@launch
             _songListUiState.value = _songListUiState.value.copy(
                 isLoading = true,
+                isRefreshing = isPullToRefresh,
                 errorMsg = null
             )
 
@@ -62,12 +63,14 @@ class FavoriteMusicViewModel @Inject constructor(
             when(result) {
                 is RepositoryWorkResult.Success -> {
                     _songListUiState.value = _songListUiState.value.copy(
-                        isLoading = false
+                        isLoading = false,
+                        isRefreshing = false
                     )
                 }
                 is RepositoryWorkResult.Failure -> {
                     _songListUiState.value = _songListUiState.value.copy(
                         isLoading = false,
+                        isRefreshing = false,
                         errorMsg = result.message
                     )
                 }

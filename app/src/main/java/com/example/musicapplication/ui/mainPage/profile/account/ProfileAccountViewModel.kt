@@ -126,7 +126,7 @@ class ProfileAccountViewModel @Inject constructor(
                     userId = userId,
                     email = latest.email,
                     nickName = state.nickName,
-                    avatarUrl = latest.avatarUrl
+                    avatarUrl = latest.avatarUrl,
                 )
             )
 

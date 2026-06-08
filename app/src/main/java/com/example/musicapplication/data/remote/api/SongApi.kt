@@ -34,4 +34,9 @@ interface SongApi {
         @Path("songId") songId: Long
     ) : ApiResponse<SongResponse>
 
+
+    @POST("/songs/{songId}/play")
+    suspend fun increaseSongPlayCount(
+        @Path("songId") songId: Long
+    ) : ApiResponse<Any>
 }

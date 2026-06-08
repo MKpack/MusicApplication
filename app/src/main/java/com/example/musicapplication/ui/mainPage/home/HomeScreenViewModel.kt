@@ -20,7 +20,8 @@ data class SongListUiState(
     val current: Long = 0,
     val pages: Long = 0,
     val errorMsg: String? = null,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val isRefreshing: Boolean = false
 )
 
 
@@ -50,13 +51,15 @@ class HomeScreenViewModel @Inject constructor(
         }
     }
 
-    fun refreshHotSongs() {
+    fun refreshHotSongs(isPullToRefresh: Boolean = false) {
         viewModelScope.launch {
             val state = _songListUiState.value
             if (state.isLoading) return@launch
+            if (state.isRefreshing) return@launch
 
             _songListUiState.value = state.copy(
-                isLoading = true,
+                isLoading = !isPullToRefresh,
+                isRefreshing = isPullToRefresh,
                 errorMsg = null
             )
 
@@ -65,13 +68,15 @@ class HomeScreenViewModel @Inject constructor(
             when(result) {
                 is RepositoryWorkResult.Success -> {
                     _songListUiState.value = _songListUiState.value.copy(
-                        isLoading = false
+                        isLoading = false,
+                        isRefreshing = false
                     )
                     Log.d(TAG, "getHotSongs: ${result.data}")
                 }
                 is RepositoryWorkResult.Failure -> {
                     _songListUiState.value = _songListUiState.value.copy(
                         isLoading = false,
+                        isRefreshing = false,
                         errorMsg = result.message
                     )
                 }

@@ -12,11 +12,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -32,9 +35,14 @@ import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshState
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -47,9 +55,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -63,6 +73,7 @@ import com.example.musicapplication.ui.theme.MusicThemePreset
 import com.example.musicapplication.ui.theme.ThemeViewModel
 import com.example.musicapplication.utils.LocalAudioMetaDataReader
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     modifier: Modifier = Modifier,
@@ -81,6 +92,7 @@ fun ProfileScreen(
     var isThemeExpanded by remember { mutableStateOf(false) }
 //    var selectedThemeKey by remember { mutableStateOf("green") }
     val themePreset by themeViewModel.themePreset.collectAsStateWithLifecycle()
+    val pullToRefreshState = rememberPullToRefreshState()
 
     LaunchedEffect(uiState.errorMessage) {
         val message = uiState.errorMessage ?: return@LaunchedEffect
@@ -88,64 +100,130 @@ fun ProfileScreen(
         profileViewModel.consumeErrorMessage()
     }
 
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        LocalMusicThemeColors.current.bgTop,
-                        LocalMusicThemeColors.current.bgBottom
-                    )
-                )
-            ),
-        contentPadding = PaddingValues(
-            start = 18.dp,
-            end = 18.dp,
-            top = 12.dp,
-            bottom = 150.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        item {
-            ProfileHeader()
-        }
-
-        item { ProfileSummary(uiState) }
-
-        item {
-            ProfileGroup(
-                items = listOf(
-                    ProfileAction("账号资料", Icons.Default.Person, onClick = onClickAccount),
-                    ProfileAction("下载管理", Icons.Default.Download, onClick = onClickDownload),
-                    ProfileAction("喜欢的歌曲", Icons.Default.Favorite, onClick = onClickFavorite),
-                    ProfileAction("最近播放", Icons.Default.History, onClick = onClickHistory)
-                )
+    PullToRefreshBox(
+        isRefreshing = uiState.isRefreshing,
+        onRefresh = {
+            profileViewModel.refreshProfile()
+        },
+        modifier = modifier.fillMaxSize(),
+        state = pullToRefreshState,
+        indicator = {
+            ProfileRefreshIndicator(
+                state = pullToRefreshState,
+                isRefreshing = uiState.isRefreshing,
+                modifier = Modifier.align(Alignment.TopCenter)
             )
         }
-
-        item {
-            ProfileGroup(
-                items = listOf(
-                    ProfileAction("主题颜色", Icons.Default.Palette, isExpanded = isThemeExpanded) {
-                        isThemeExpanded = !isThemeExpanded
-                    },
-                    ProfileAction("设置", Icons.Default.Settings, onClick = onClickSetting),
-                    ProfileAction("关于音乐", Icons.Default.Info, onClick = onClickAbout),
-                    ProfileAction("退出登录", Icons.Default.Logout, onClick = { onClickLogout() })
-                ),
-                expandedContent = mapOf(
-                    0 to {
-                        ThemeColorChooser(
-                            selectedKey = themePreset,
-                            onSelected = { option ->
-                                themeViewModel.saveThemePreset(option)
-                                Toast.makeText(context, "已选择${option.name}", Toast.LENGTH_SHORT).show()
-                            }
+    ) {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            LocalMusicThemeColors.current.bgTop,
+                            LocalMusicThemeColors.current.bgBottom
                         )
-                    }
+                    )
                 ),
-                expandedIndexes = if (isThemeExpanded) setOf(0) else emptySet()
+            contentPadding = PaddingValues(
+                start = 18.dp,
+                end = 18.dp,
+                top = 12.dp,
+                bottom = 150.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            item {
+                ProfileHeader()
+            }
+
+            item { ProfileSummary(uiState) }
+
+            item {
+                ProfileGroup(
+                    items = listOf(
+                        ProfileAction("账号资料", Icons.Default.Person, onClick = onClickAccount),
+                        ProfileAction("下载管理", Icons.Default.Download, onClick = onClickDownload),
+                        ProfileAction("喜欢的歌曲", Icons.Default.Favorite, onClick = onClickFavorite),
+                        ProfileAction("最近播放", Icons.Default.History, onClick = onClickHistory)
+                    )
+                )
+            }
+
+            item {
+                ProfileGroup(
+                    items = listOf(
+                        ProfileAction("主题颜色", Icons.Default.Palette, isExpanded = isThemeExpanded) {
+                            isThemeExpanded = !isThemeExpanded
+                        },
+                        ProfileAction("设置", Icons.Default.Settings, onClick = onClickSetting),
+                        ProfileAction("关于音乐", Icons.Default.Info, onClick = onClickAbout),
+                        ProfileAction("退出登录", Icons.Default.Logout, onClick = { onClickLogout() })
+                    ),
+                    expandedContent = mapOf(
+                        0 to {
+                            ThemeColorChooser(
+                                selectedKey = themePreset,
+                                onSelected = { option ->
+                                    themeViewModel.saveThemePreset(option)
+                                    Toast.makeText(context, "已选择${option.name}", Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                        }
+                    ),
+                    expandedIndexes = if (isThemeExpanded) setOf(0) else emptySet()
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ProfileRefreshIndicator(
+    state: PullToRefreshState,
+    isRefreshing: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val density = LocalDensity.current
+    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val offsetY = with(density) {
+        val hiddenY = -(statusBarTop + 42.dp).toPx()
+        val shownY = (statusBarTop + 18.dp).toPx()
+        val progress = state.distanceFraction.coerceIn(0f, 1f)
+
+        if (isRefreshing) {
+            shownY
+        } else {
+            hiddenY + (shownY - hiddenY) * progress
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .graphicsLayer {
+                translationY = offsetY
+                alpha = if (isRefreshing || state.distanceFraction > 0f) 1f else 0f
+            }
+            .size(36.dp)
+            .clip(CircleShape)
+            .background(LocalMusicThemeColors.current.surface)
+            .border(1.dp, LocalMusicThemeColors.current.border, CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        if (isRefreshing) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(26.dp),
+                color = LocalMusicThemeColors.current.primary,
+                strokeWidth = 2.5.dp
+            )
+        } else {
+            CircularProgressIndicator(
+                progress = { state.distanceFraction.coerceIn(0f, 1f) },
+                color = LocalMusicThemeColors.current.primary,
+                strokeWidth = 3.dp,
+                modifier = Modifier.size(20.dp)
             )
         }
     }
@@ -240,10 +318,18 @@ private fun ProfileSummary(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            StatCard("歌单", "12", Modifier.weight(1f))
-            StatCard("收藏", "248", Modifier.weight(1f))
-            StatCard("播放", "1.6k", Modifier.weight(1f))
+            StatCard("歌单", "0", Modifier.weight(1f))
+            StatCard("收藏", formatCount(uiState.favoriteCount), Modifier.weight(1f))
+            StatCard("播放", formatCount(uiState.playCount), Modifier.weight(1f))
         }
+    }
+}
+
+private fun formatCount(count: Long): String {
+    return when {
+        count >= 10_000 -> String.format("%.1fw", count / 10_000f)
+        count >= 1_000 -> String.format("%.1fk", count / 1_000f)
+        else -> count.toString()
     }
 }
 

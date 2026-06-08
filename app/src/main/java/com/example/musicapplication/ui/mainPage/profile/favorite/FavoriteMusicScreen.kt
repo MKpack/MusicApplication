@@ -74,7 +74,7 @@ fun FavoriteMusicScreen(
     PullToRefreshBox(
         isRefreshing = songListUiState.isRefreshing,
         onRefresh = {
-            favoriteMusicViewModel.refreshLovedSongs()
+            favoriteMusicViewModel.refreshLovedSongs(isPullToRefresh = true)
         },
         modifier = modifier.fillMaxSize(),
         state = pullToRefreshState,

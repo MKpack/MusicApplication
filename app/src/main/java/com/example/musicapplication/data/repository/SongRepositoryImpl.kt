@@ -183,6 +183,21 @@ class SongRepositoryImpl @Inject constructor(
     }
 
     /**
+     * 增加歌曲的播放次数
+     */
+    override suspend fun increaseSongPlayCount(songId: Long): RepositoryWorkResult<Unit> {
+        try {
+            val result = songApi.increaseSongPlayCount(songId)
+            if (result.code == 200) {
+                return RepositoryWorkResult.Success(Unit)
+            }
+            return RepositoryWorkResult.Failure("更新播放次数失败")
+        } catch (e: Exception) {
+            return RepositoryWorkResult.Failure("更新播放次数失败", throwable = e)
+        }
+    }
+
+    /**
      * clear recent play songs
      */
     override suspend fun clearRecentPlay() {

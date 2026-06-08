@@ -1,7 +1,6 @@
 package com.example.musicapplication.data.repository
 
 import com.example.musicapplication.data.common.RepositoryWorkResult
-import com.example.musicapplication.domain.model.PageResult
 import com.example.musicapplication.domain.model.Song
 import com.example.musicapplication.domain.model.SongListKey
 import kotlinx.coroutines.flow.Flow
@@ -26,6 +25,8 @@ interface SongRepository {
     suspend fun unFavoriteSong(songId: Long): RepositoryWorkResult<Unit>
 
     suspend fun addRecentPlay(song: Song)
+
+    suspend fun increaseSongPlayCount(songId: Long): RepositoryWorkResult<Unit>
 
     suspend fun clearRecentPlay()
 }

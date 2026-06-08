@@ -9,6 +9,7 @@ import com.example.musicapplication.data.remote.api.MainPageApi
 import com.example.musicapplication.data.remote.api.ProfileApi
 import com.example.musicapplication.data.remote.api.SongApi
 import com.example.musicapplication.data.remote.api.TokenApi
+import com.example.musicapplication.data.remote.api.UserStatApi
 import com.example.musicapplication.data.remote.interceptor.AuthInterceptor
 import com.example.musicapplication.data.remote.interceptor.TokenAuthenticator
 import com.example.musicapplication.data.session.SessionManager
@@ -139,6 +140,12 @@ object NetworkModule {
     @Singleton
     fun provideSongApi(retrofit: Retrofit): SongApi {
         return retrofit.create(SongApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUserStatApi(retrofit: Retrofit): UserStatApi {
+        return retrofit.create(UserStatApi::class.java)
     }
 }
 

@@ -399,26 +399,30 @@ private fun AppleMusicPlayerMorph(
                         .clip(RoundedCornerShape(lerpDp(14.dp, 18.dp, p)))
                 )
 
-                MiniContent(
-                    song = song,
-                    isPlaying = isPlaying,
-                    alpha = miniContentAlpha,
-                    onPlayPauseClick = onPlayPauseClick,
-                    onPlayNextClick = {
-                        playerViewModel.playNext()
-                    }
-                )
+                if (miniContentAlpha > 0.01f) {
+                    MiniContent(
+                        song = song,
+                        isPlaying = isPlaying,
+                        alpha = miniContentAlpha,
+                        onPlayPauseClick = onPlayPauseClick,
+                        onPlayNextClick = {
+                            playerViewModel.playNext()
+                        }
+                    )
+                }
 
-                FullContent(
-                    song = song,
-                    isPlaying = isPlaying,
-                    alpha = fullContentAlpha,
-                    onPlayPauseClick = onPlayPauseClick,
-                    selectedPanel = fullPanel,
-                    onPanelChange = { fullPanel = it },
-                    onMoreClick = { showMoreActions = true },
-                    playerViewModel = playerViewModel
-                )
+                if (fullContentAlpha > 0.01f) {
+                    FullContent(
+                        song = song,
+                        isPlaying = isPlaying,
+                        alpha = fullContentAlpha,
+                        onPlayPauseClick = onPlayPauseClick,
+                        selectedPanel = fullPanel,
+                        onPanelChange = { fullPanel = it },
+                        onMoreClick = { showMoreActions = true },
+                        playerViewModel = playerViewModel
+                    )
+                }
             }
         }
 
@@ -531,54 +535,58 @@ private fun FullContent(
                 .fillMaxWidth()
                 .height(600.dp)
         ) {
-            ArtworkTopContent(
-                song = song,
-                onFavoriteSong = { playerViewModel.doFavoriteEvent() },
-                onMoreClick = onMoreClick,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(bottom = 34.dp)
-                    .alpha(1f - panelTextAlpha)
-            )
+            if (panelTextAlpha < 0.99f) {
+                ArtworkTopContent(
+                    song = song,
+                    onFavoriteSong = { playerViewModel.doFavoriteEvent() },
+                    onMoreClick = onMoreClick,
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .padding(bottom = 34.dp)
+                        .alpha(1f - panelTextAlpha)
+                )
+            }
 
-            PanelTopContent(
-                selectedPanel = selectedPanel,
-                song = song,
-                queue = queue,
-                queueKeys = queueKeys,
-                currentIndex = currentIndex,
-                playMode = playMode,
-                onShuffleClick = {
-                    playerViewModel.changePlayMode(PlayMode.Shuffle)
-                },
-                onRepeatClick = {
-                    playerViewModel.changePlayMode(
-                        if (playMode == PlayMode.Repeat) {
-                            PlayMode.RepeatOne
-                        } else {
-                            PlayMode.Repeat
-                        }
-                    )
-                },
-                onSequenceClick = {
-                    playerViewModel.changePlayMode(PlayMode.Sequence)
-                },
-                onMoreClick = onMoreClick,
-                onFavoriteSong = {
-                    playerViewModel.doFavoriteEvent()
-                },
-                onSongClick = { index ->
-                    playerViewModel.playQueueIndex(index)
-                },
-                onMoveSong = { from, to ->
-                    playerViewModel.moveQueueSong(from, to)
-                },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .alpha(panelTextAlpha),
-                lyricsUiState = lyricsUiState,
-                currentPosition = currentPosition
-            )
+            if (panelTextAlpha > 0.01f) {
+                PanelTopContent(
+                    selectedPanel = selectedPanel,
+                    song = song,
+                    queue = queue,
+                    queueKeys = queueKeys,
+                    currentIndex = currentIndex,
+                    playMode = playMode,
+                    onShuffleClick = {
+                        playerViewModel.changePlayMode(PlayMode.Shuffle)
+                    },
+                    onRepeatClick = {
+                        playerViewModel.changePlayMode(
+                            if (playMode == PlayMode.Repeat) {
+                                PlayMode.RepeatOne
+                            } else {
+                                PlayMode.Repeat
+                            }
+                        )
+                    },
+                    onSequenceClick = {
+                        playerViewModel.changePlayMode(PlayMode.Sequence)
+                    },
+                    onMoreClick = onMoreClick,
+                    onFavoriteSong = {
+                        playerViewModel.doFavoriteEvent()
+                    },
+                    onSongClick = { index ->
+                        playerViewModel.playQueueIndex(index)
+                    },
+                    onMoveSong = { from, to ->
+                        playerViewModel.moveQueueSong(from, to)
+                    },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .alpha(panelTextAlpha),
+                    lyricsUiState = lyricsUiState,
+                    currentPosition = currentPosition
+                )
+            }
         }
 
         PlaybackFooter(
