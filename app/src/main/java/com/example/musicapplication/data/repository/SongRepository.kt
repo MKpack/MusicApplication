@@ -9,6 +9,8 @@ interface SongRepository {
 
     fun observeSongs(listKey: SongListKey): Flow<List<Song>>
 
+    fun observeSongsByIds(songIds: List<Long>): Flow<List<Song>>
+
     fun observeRecentSongs(): Flow<List<Song>>
 
     suspend fun refreshSongs(

@@ -52,6 +52,7 @@ import com.example.musicapplication.ui.mainPage.profile.favorite.FavoriteMusicSc
 import com.example.musicapplication.ui.mainPage.profile.recent.RecentMusicScreen
 import com.example.musicapplication.ui.mainPage.profile.account.ProfileAccountScreen
 import com.example.musicapplication.ui.mainPage.profile.setting.ProfileSettingScreen
+import com.example.musicapplication.ui.mainPage.search.SearchScreen
 import com.example.musicapplication.ui.session.SessionViewModel
 import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 import com.example.musicapplication.utils.LocalAudioMetaDataReader
@@ -168,6 +169,17 @@ fun MainPage(
                             innerPadding
                         ),
                         context = context,
+                        onSongClick = { songs, index ->
+                            playerViewModel.playQueueSong(songs, index)
+                        },
+                        onSearchClick = {
+                            navController.navigate(RouterConfig.SEARCH)
+                        }
+                    )
+                }
+                composable(RouterConfig.SEARCH) {
+                    SearchScreen(
+                        onBack = { navController.popBackStack() },
                         onSongClick = { songs, index ->
                             playerViewModel.playQueueSong(songs, index)
                         }

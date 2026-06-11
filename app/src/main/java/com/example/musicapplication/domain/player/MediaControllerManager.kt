@@ -49,12 +49,14 @@ class MediaControllerManager @Inject constructor(
     // 歌曲或歌曲队列
     private var pendingSong: Song? = null
     private var pendingQueue: Pair<List<Song>, Int>? = null
+    private var pendingRestoreQueue: Triple<List<Song>, Int, Long>? = null
     private var currentQueue: List<Song> = emptyList()
     private var desiredRepeatMode: Int = Player.REPEAT_MODE_OFF
 
     //
     private var playbackCommandVersion = 0L
 
+    // 当前播放的时间
     private val _currentPosition = MutableStateFlow(0)
     val currentPosition = _currentPosition.asStateFlow()
 
@@ -66,7 +68,7 @@ class MediaControllerManager @Inject constructor(
     private val _isPlaying = MutableStateFlow(false)
     val isPlaying = _isPlaying.asStateFlow()
 
-    // 当前播放时长（位置）
+    // 当前播放位置
     private val _currentProgress = MutableStateFlow(0f)
     val currentProgress = _currentProgress.asStateFlow()
 
@@ -130,6 +132,12 @@ class MediaControllerManager @Inject constructor(
                     mediaController.repeatMode = desiredRepeatMode
                     mediaController.addListener(playerListener)
                     syncFromController(mediaController)
+
+                    pendingRestoreQueue?.let { (songs, index, positionMs) ->
+                        pendingRestoreQueue = null
+                        restoreQueue(songs, index, positionMs)
+                        return@addListener
+                    }
 
                     pendingQueue?.let { (songs, index) ->
                         pendingQueue = null
@@ -210,6 +218,51 @@ class MediaControllerManager @Inject constructor(
                 mediaController.setMediaItems(mediaItems, startIndex, 0L)
                 mediaController.prepare()
                 mediaController.play()
+            }
+
+            preloadNextArtwork(startIndex)
+        }
+    }
+
+    fun restoreQueue(songs: List<Song>, startIndex: Int, positionMs: Long) {
+        if (songs.isEmpty()) return
+        if (startIndex !in songs.indices) return
+
+        val mediaController = controller
+        if (mediaController == null) {
+            pendingRestoreQueue = Triple(songs, startIndex, positionMs)
+            pendingQueue = null
+            pendingSong = null
+            connect()
+            return
+        }
+
+        val commandVersion = ++playbackCommandVersion
+        currentQueue = songs
+
+        scope.launch {
+            val mediaItems = songs.mapIndexedNotNull { index, song ->
+                val artworkUri = if (index == startIndex) {
+                    artworkCacheManager.getOrDownloadArtworkUri(song)
+                } else {
+                    artworkCacheManager.getCachedArtworkUri(song)
+                }
+                song.toMediaItem(artworkUri)
+            }
+            if (mediaItems.isEmpty()) return@launch
+            if (commandVersion != playbackCommandVersion) return@launch
+
+            withContext(Dispatchers.Main) {
+                if (commandVersion != playbackCommandVersion) return@withContext
+                mediaController.setMediaItems(
+                    mediaItems,
+                    startIndex,
+                    positionMs.coerceAtLeast(0L)
+                )
+                mediaController.prepare()
+                mediaController.pause()
+                _isPlaying.value = false
+                _currentPosition.value = (positionMs / 1000L).toInt()
             }
 
             preloadNextArtwork(startIndex)
@@ -405,6 +458,7 @@ class MediaControllerManager @Inject constructor(
         controller = null
         pendingSong = null
         pendingQueue = null
+        pendingRestoreQueue = null
         currentQueue = emptyList()
         stopProgressUpdate()
         scope.cancel()

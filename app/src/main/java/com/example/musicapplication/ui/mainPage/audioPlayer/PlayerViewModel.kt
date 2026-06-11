@@ -23,11 +23,16 @@ import androidx.core.net.toUri
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import com.example.musicapplication.data.common.RepositoryWorkResult
+import com.example.musicapplication.data.local.artwork.ArtworkCacheManager
+import com.example.musicapplication.data.local.player.PlayerSnapshot
+import com.example.musicapplication.data.local.player.PlayerStateStore
 import com.example.musicapplication.data.repository.SongRepository
 import com.example.musicapplication.data.repository.UserStatRepository
 import com.example.musicapplication.utils.LrcParser
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -47,7 +52,9 @@ class PlayerViewModel @Inject constructor(
     private val okHttpClient: OkHttpClient,
     private val songRepository: SongRepository,
     private val userStatRepository: UserStatRepository,
-    private val mediaControllerManager: MediaControllerManager
+    private val mediaControllerManager: MediaControllerManager,
+    private val artworkCacheManager: ArtworkCacheManager,
+    private val playerStateStore: PlayerStateStore
 ): ViewModel() {
     private val TAG = "PlayerViewModel"
     // 具体播放能力由 PlaybackService 中的 ExoPlayer 处理；ViewModel 只保存 UI 状态和队列规则。
@@ -100,11 +107,13 @@ class PlayerViewModel @Inject constructor(
     // indictor progress 进度
     val currentProgress = mediaControllerManager.currentProgress.stateIn(viewModelScope, SharingStarted.Lazily, 0f)
 
-    val isDragging = mediaControllerManager.isDragging.stateIn(viewModelScope, SharingStarted.Lazily, false)
+    val isDragging = mediaControllerManager.isDragging
 
     init {
         mediaControllerManager.connect()
         applyMediaRepeatMode(_playMode.value)
+        restoreLastPlayerState()
+        startPlayerSnapshotAutoSave()
         viewModelScope.launch {
             mediaControllerManager.playbackEndedEvents.collect {
                 playNext()
@@ -128,31 +137,39 @@ class PlayerViewModel @Inject constructor(
     }
 
 
+    // 新增方法获取bitmap
+    private suspend fun loadColorBitmap() : Bitmap? {
+        val song = _song.value
+        val cover = song.cover ?: return null
+
+        return withContext(Dispatchers.IO) {
+            try {
+                when {
+                    // cache
+                    cover.startsWith("http") -> {
+                        val file = artworkCacheManager.getCachedArtworkFile(song)
+                        file?.takeIf { it.exists() && it.length() > 0f }
+                            ?.let {
+                                BitmapFactory.decodeFile(file.absolutePath)
+                            }
+                    }
+                    // 本地外部打开
+                    else -> {
+                        context.contentResolver.openInputStream(cover.toUri()).use { inputStream ->
+                            BitmapFactory.decodeStream(inputStream)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                null
+            }
+        }
+    }
     // 暴露给UI层进行调用
     fun updateColorsFromSongCover() {
         viewModelScope.launch {
-            val cover = _song.value.cover
-            when {
-                // 本地uri/文件路径
-                cover != null -> {
-                    try {
-                        val uri = cover.toUri()
-                        val inputStream = context.contentResolver.openInputStream(uri)
-                        val bitmap = BitmapFactory.decodeStream(inputStream)
-                        inputStream?.close()
-                        bitmap?.let { updateColorsFromBitmap(bitmap) }
-                    }catch (e: Exception) {
-                        // Uri 无效或无法读取 → fallback 到默认封面
-                        val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.default_cover)
-                        updateColorsFromBitmap(bitmap)
-                    }
-                }
-                // cover 值为空， 使用默认cover
-                else -> {
-                    val bitmap = BitmapFactory.decodeResource(context.resources, R.drawable.default_cover)
-                    updateColorsFromBitmap(bitmap)
-                }
-            }
+            val bitmap = loadColorBitmap() ?: BitmapFactory.decodeResource(context.resources, R.drawable.default_cover)
+            updateColorsFromBitmap(bitmap)
         }
     }
 
@@ -170,6 +187,7 @@ class PlayerViewModel @Inject constructor(
             }
         }
         applyMediaRepeatMode(_playMode.value)
+        savePlayerSnapshot()
     }
 
     private fun applyMediaRepeatMode(playMode: PlayMode) {
@@ -313,6 +331,7 @@ class PlayerViewModel @Inject constructor(
             songs = newQueue,
             currentIndex = _currentIndex.value
         )
+        savePlayerSnapshot()
     }
 
     // 外部页面点击某个列表时调用。这里会创建一个新的播放队列，并给队列每一项生成稳定 key。
@@ -340,6 +359,7 @@ class PlayerViewModel @Inject constructor(
             mediaControllerManager.playQueue(songs, index)
             onSongStarted(songs[index])
         }
+        savePlayerSnapshot()
     }
 
     // 构造随机播放队列。当前歌曲固定在第一位，剩余歌曲随机，避免切换随机后立刻换歌。
@@ -410,6 +430,7 @@ class PlayerViewModel @Inject constructor(
                 currentIndex = 0
             )
         }
+        savePlayerSnapshot()
     }
 
     private fun restoreOriginalQueue(nextMode: PlayMode) {
@@ -432,6 +453,7 @@ class PlayerViewModel @Inject constructor(
             songs = originalQueue,
             currentIndex = _currentIndex.value
         )
+        savePlayerSnapshot()
     }
 
     private fun buildQueueMoveOperations(
@@ -503,8 +525,15 @@ class PlayerViewModel @Inject constructor(
      */
     fun playSong(song: Song) {
         song.source ?: return
+        val queueKey = nextQueueKey(song)
+        _songQueue.value = listOf(song)
+        _queueKeys.value = listOf(queueKey)
+        _originalQueue.value = listOf(song)
+        _originalQueueKeys.value = listOf(queueKey)
+        _currentIndex.value = 0
         mediaControllerManager.playSong(song)
         onSongStarted(song)
+        savePlayerSnapshot()
     }
 
     private fun onSongStarted(song: Song) {
@@ -527,6 +556,7 @@ class PlayerViewModel @Inject constructor(
 
         _currentIndex.value = index
         onSongStarted(_songQueue.value[index])
+        savePlayerSnapshot()
     }
 
     // 队列内部点击歌曲时调用，只改变当前 index，不重新创建队列和 key。
@@ -536,6 +566,7 @@ class PlayerViewModel @Inject constructor(
         _currentIndex.value = index
         mediaControllerManager.playQueueIndex(index)
         onSongStarted(songs[index])
+        savePlayerSnapshot()
     }
 
     // 下一首
@@ -557,6 +588,7 @@ class PlayerViewModel @Inject constructor(
                 if (index + 1 < songs.size) index + 1
                 else {
                     mediaControllerManager.pauseAtStart()
+                    savePlayerSnapshot()
                     return
                 }
             }
@@ -564,6 +596,7 @@ class PlayerViewModel @Inject constructor(
         _currentIndex.value = nextIndex
         mediaControllerManager.playQueueIndex(nextIndex)
         onSongStarted(songs[nextIndex])
+        savePlayerSnapshot()
     }
 
     private fun nextQueueKey(song: Song): String {
@@ -597,16 +630,85 @@ class PlayerViewModel @Inject constructor(
         _currentIndex.value = nextIndex
         mediaControllerManager.playQueueIndex(nextIndex)
         onSongStarted(songs[nextIndex])
+        savePlayerSnapshot()
     }
 
     // 暂停
-    fun pause() = mediaControllerManager.pause()
+    fun pause() {
+        mediaControllerManager.pause()
+        savePlayerSnapshot()
+    }
     // 继续
     fun resume() = mediaControllerManager.resume()
     // 跳转指定位置
-    fun seekTo() = mediaControllerManager.seekTo()
+    fun seekTo() {
+        mediaControllerManager.seekTo()
+        savePlayerSnapshot()
+    }
 
     fun changeDraggingStatus(tmp: Boolean) = mediaControllerManager.isDraggingStatusChange(tmp)
+
+    private fun restoreLastPlayerState() {
+        viewModelScope.launch {
+            val snapshot = playerStateStore.snapshotFlow.first() ?: return@launch
+            val songs = songRepository.observeSongsByIds(snapshot.songIds).first()
+            if (songs.isEmpty()) return@launch
+
+            val safeIndex = snapshot.currentIndex.coerceIn(songs.indices)
+            val queueKeys = songs.map { nextQueueKey(it) }
+            val playMode = runCatching {
+                PlayMode.valueOf(snapshot.playModeName)
+            }.getOrDefault(PlayMode.Repeat)
+
+            _playMode.value = playMode
+            applyMediaRepeatMode(playMode)
+            _songQueue.value = songs
+            _queueKeys.value = queueKeys
+            _originalQueue.value = songs
+            _originalQueueKeys.value = queueKeys
+            _currentIndex.value = safeIndex
+            setCurrentSongForRestore(songs[safeIndex])
+
+            mediaControllerManager.restoreQueue(
+                songs = songs,
+                startIndex = safeIndex,
+                positionMs = snapshot.positionMs
+            )
+        }
+    }
+
+    private fun setCurrentSongForRestore(song: Song) {
+        _song.value = song
+        _songUiState.value = song.toSongUiState()
+        loadLyrics(song.lyric)
+    }
+
+    private fun startPlayerSnapshotAutoSave() {
+        viewModelScope.launch {
+            while (true) {
+                delay(3000)
+                savePlayerSnapshot()
+            }
+        }
+    }
+
+    private fun savePlayerSnapshot() {
+        val songs = _songQueue.value
+        val currentIndex = _currentIndex.value
+        if (songs.isEmpty()) return
+        if (currentIndex !in songs.indices) return
+
+        viewModelScope.launch {
+            playerStateStore.saveSnapshot(
+                PlayerSnapshot(
+                    songIds = songs.map { it.songId },
+                    currentIndex = currentIndex,
+                    positionMs = currentPosition.value * 1000L,
+                    playModeName = _playMode.value.name
+                )
+            )
+        }
+    }
 
     override fun onCleared() {
         super.onCleared()

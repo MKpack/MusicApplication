@@ -19,6 +19,7 @@ import com.example.musicapplication.domain.mapper.toSongRecentPlayEntity
 import com.example.musicapplication.domain.model.Song
 import com.example.musicapplication.domain.model.SongListKey
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
@@ -37,6 +38,18 @@ class SongRepositoryImpl @Inject constructor(
             .map { list ->
                 list.map { it ->
                     it.toSong()
+                }
+            }
+    }
+
+    override fun observeSongsByIds(songIds: List<Long>): Flow<List<Song>> {
+        if (songIds.isEmpty()) return flowOf(emptyList())
+
+        return songDao.observeSongsByIds(songIds)
+            .map { entities ->
+                val entityMap = entities.associateBy { it.songId }
+                songIds.mapNotNull { songId ->
+                    entityMap[songId]?.toSong()
                 }
             }
     }
@@ -218,7 +231,7 @@ class SongRepositoryImpl @Inject constructor(
                     return RepositoryWorkResult.Failure("歌单接口还没有实现")
                 }
                 is SongListKey.Search -> {
-                    return RepositoryWorkResult.Failure("歌单接口还没有实现")
+                    songApi.searchSongs(listKey.keyword, pageNum, pageSize)
                 }
             }
 

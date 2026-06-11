@@ -1099,6 +1099,9 @@ private fun PlaybackModeButton(
     }
 }
 
+/**
+ * 歌词板
+ */
 @Composable
 private fun LyricsPanel(
     lyricsUiState: LyricsUiState,
@@ -1134,42 +1137,46 @@ private fun LyricsPanel(
             }
 
             else -> {
-                val currentIndex = lines.indexOfLast {
-                    it.timeSeconds <= currentPosition
-                }.coerceAtLeast(0)
-                val lazyListState = rememberLazyListState()
-                val density = LocalDensity.current
-                val centerOffset = with(density) { 150.dp.roundToPx() }
-
-                LaunchedEffect(currentIndex, lines.size) {
-                    lazyListState.animateScrollToItem(
-                        index = currentIndex,
-                        scrollOffset = -centerOffset
-                    )
-                }
-
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    state = lazyListState,
-                    contentPadding = PaddingValues(vertical = 150.dp),
-                    verticalArrangement = Arrangement.spacedBy(18.dp)
+                BoxWithConstraints(
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    itemsIndexed(lines) { index, line ->
-                        val selected = index == currentIndex
+                    val currentIndex = lines.indexOfLast {
+                        it.timeSeconds <= currentPosition
+                    }.coerceAtLeast(0)
+                    val lazyListState = rememberLazyListState()
+                    val density = LocalDensity.current
+                    val centerOffset = with(density) { (maxHeight / 2).roundToPx() }
 
-                        Text(
-                            text = line.text,
-                            color = if (selected) {
-                                Color.White
-                            } else {
-                                Color.White.copy(alpha = 0.45f)
-                            },
-                            fontSize = if (selected) 28.sp else 23.sp,
-                            lineHeight = if (selected) 35.sp else 30.sp,
-                            fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Bold,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
+                    LaunchedEffect(currentIndex, lines.size) {
+                        lazyListState.animateScrollToItem(
+                            index = currentIndex,
+                            scrollOffset = 0
                         )
+                    }
+
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        state = lazyListState,
+                        contentPadding = PaddingValues(vertical = maxHeight / 2),
+                        verticalArrangement = Arrangement.spacedBy(18.dp)
+                    ) {
+                        itemsIndexed(lines) { index, line ->
+                            val selected = index == currentIndex
+
+                            Text(
+                                text = line.text,
+                                color = if (selected) {
+                                    Color.White
+                                } else {
+                                    Color.White.copy(alpha = 0.45f)
+                                },
+                                fontSize = if (selected) 28.sp else 23.sp,
+                                lineHeight = if (selected) 35.sp else 30.sp,
+                                fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Bold,
+                                maxLines = 4,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }

@@ -13,36 +13,59 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
 import javax.inject.Inject
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Singleton
 class ArtworkCacheManager @Inject constructor(
     @ApplicationContext private val context: Context,
+    @Named("media")
     private val okHttpClient: OkHttpClient
 ) {
     private val artworkDir: File
         get() = File(context.cacheDir, "artwork")
 
+
+    // 这里是给systemUI使用的，他需要fileProvide去拿app内的数据
     fun getCachedArtworkUri(song: Song): Uri? {
         val cover = song.cover ?: return null
         if (!cover.startsWith("http")) return cover.toUri()
 
+        return getCachedArtworkFile(song)?.toArtworkUri()
+    }
+
+    /**
+     * 给 app 自己读缓存文件使用，比如 Palette 提取背景色。
+     * 读取包内 cache 不需要额外权限。
+     */
+    fun getCachedArtworkFile(song: Song): File? {
+        val cover = song.cover ?: return null
+        if (!cover.startsWith("http")) return File(cover)
+
         val file = artworkFile(song)
-        return if (file.exists() && file.length() > 0L) {
-            file.toArtworkUri()
-        } else {
-            null
-        }
+        return if (file.exists() && file.length() > 0L) file else null
     }
 
     /**
      * 有缓存返回，无缓存网络请求先缓存
+     * 这里返回 content Uri，给 SystemUI / 通知栏这类外部进程读取。
      */
     suspend fun getOrDownloadArtworkUri(song: Song): Uri? {
-        getCachedArtworkUri(song)?.let { return it }
-
         val cover = song.cover ?: return null
         if (!cover.startsWith("http")) return cover.toUri()
+
+        return getOrDownloadArtworkFile(song)?.toArtworkUri()
+    }
+
+    /**
+     * 有缓存返回缓存文件，无缓存则带 token 请求网络并写入 app cache。
+     * 这里返回 File，适合 app 内部直接读取。
+     */
+    suspend fun getOrDownloadArtworkFile(song: Song): File? {
+        getCachedArtworkFile(song)?.let { return it }
+
+        val cover = song.cover ?: return null
+        if (!cover.startsWith("http")) return File(cover)
 
         return withContext(Dispatchers.IO) {
             try {
@@ -62,13 +85,14 @@ class ArtworkCacheManager @Inject constructor(
                         body.byteStream().copyTo(output)
                     }
 
-                    if (file.length() > 0L) file.toArtworkUri() else null
+                    if (file.length() > 0L) file else null
                 }
             } catch (e: Exception) {
                 null
             }
         }
     }
+
 
     suspend fun clearArtworkCache() {
         withContext(Dispatchers.IO) {

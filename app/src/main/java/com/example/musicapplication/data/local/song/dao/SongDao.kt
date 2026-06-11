@@ -42,6 +42,9 @@ interface SongDao {
     """)
     fun observeLovedSongs(): Flow<List<SongEntity>>
 
+    @Query("SELECT * FROM songs WHERE songId IN (:songIds)")
+    fun observeSongsByIds(songIds: List<Long>): Flow<List<SongEntity>>
+
     @Query("SELECT isLoved FROM songs WHERE songId = :songId")
     suspend fun getLovedState(songId: Long): Boolean?
 }

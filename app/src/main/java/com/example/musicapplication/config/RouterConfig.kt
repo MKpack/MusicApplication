@@ -8,4 +8,5 @@ object RouterConfig {
 
     const val HOME = "home"
     const val PROFILE = "profile"
+    const val SEARCH = "search"
 }

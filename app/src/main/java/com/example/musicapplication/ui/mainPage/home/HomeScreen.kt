@@ -73,6 +73,7 @@ private data class PlaylistUi(
 fun HomeScreen(
     modifier: Modifier,
     onSongClick: (songs: List<Song>, index: Int) -> Unit,
+    onSearchClick: () -> Unit,
     context: Context,
     homeScreenViewModel: HomeScreenViewModel = hiltViewModel()
 ) {
@@ -130,25 +131,26 @@ fun HomeScreen(
             }
 
             item {
-                // TODO 新增一个搜索页
-                SearchBar({})
+                SearchBar(onSearchClick)
             }
 
-            item {
-                // TODO
-                RandomPlayCard()
-            }
+//            item {
+//                // TODO
+//                RandomPlayCard()
+//            }
 
             item {
                 SectionHeader(title = "推荐歌单", action = "查看全部")
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    items(playlists) { playlist ->
-                        PlaylistCard(playlist = playlist)
-                    }
-                }
+                Text("敬请期待")
+
+//                LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+//                    items(playlists) { playlist ->
+//                        PlaylistCard(playlist = playlist)
+//                    }
+//                }
             }
 
             item {
@@ -514,6 +516,5 @@ private fun SongRow(
         }
     }
 }
-
 
 

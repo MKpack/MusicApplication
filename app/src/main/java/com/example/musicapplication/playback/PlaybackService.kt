@@ -15,6 +15,7 @@ import com.example.musicapplication.R
 import dagger.hilt.android.AndroidEntryPoint
 import okhttp3.OkHttpClient
 import javax.inject.Inject
+import javax.inject.Named
 
 @OptIn(UnstableApi::class)
 @AndroidEntryPoint
@@ -27,6 +28,7 @@ class PlaybackService : MediaSessionService() {
     }
 
     @Inject
+    @Named("media")
     lateinit var okHttpClient: OkHttpClient
 
     private var mediaSession: MediaSession? = null

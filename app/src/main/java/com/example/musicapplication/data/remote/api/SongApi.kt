@@ -24,6 +24,13 @@ interface SongApi {
         @Query("pageSize") pageSize: Long
     ) : ApiResponse<PageResponse<SongResponse>>
 
+    @GET("/songs/search")
+    suspend fun searchSongs(
+        @Query("keyword") keyword: String,
+        @Query("pageNum") pageNum: Long,
+        @Query("pageSize") pageSize: Long
+    ) : ApiResponse<PageResponse<SongResponse>>
+
     @POST("/songs/{songId}/favorite")
     suspend fun favoriteSong(
         @Path("songId") songId: Long

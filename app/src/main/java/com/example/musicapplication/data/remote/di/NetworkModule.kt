@@ -105,6 +105,25 @@ object NetworkModule {
             .addInterceptor(authInterceptor)
             .build()
 
+    /**
+     * 专门给media使用的，不然上面给body打印出来导致oom
+     */
+    @Provides
+    @Singleton
+    @Named("media")
+    fun provideMediaOkHttpClient(
+        authInterceptor: AuthInterceptor,
+        tokenAuthenticator: TokenAuthenticator
+    ): OkHttpClient =
+        OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(0, TimeUnit.SECONDS)
+            .writeTimeout(10, TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
+            .authenticator(tokenAuthenticator)
+            .addInterceptor(authInterceptor)
+            .build()
+
     //创建retrofit实例
     @Provides
     @Singleton
@@ -148,5 +167,4 @@ object NetworkModule {
         return retrofit.create(UserStatApi::class.java)
     }
 }
-
 
