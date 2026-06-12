@@ -26,6 +26,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -44,6 +46,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -54,13 +57,18 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.musicapplication.domain.model.Song
+import com.example.musicapplication.domain.model.SongListKey
 import com.example.musicapplication.ui.theme.LocalMusicThemeColors
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 
 
 private data class PlaylistUi(
@@ -68,17 +76,21 @@ private data class PlaylistUi(
     val desc: String,
     val cover: String?
 )
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     modifier: Modifier,
-    onSongClick: (songs: List<Song>, index: Int) -> Unit,
+    onSongClick: (listKey: SongListKey, songs: List<Song>, index: Int) -> Unit,
     onSearchClick: () -> Unit,
     context: Context,
     homeScreenViewModel: HomeScreenViewModel = hiltViewModel()
 ) {
     val songList by homeScreenViewModel.songListUiState.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
+    // 可以获取lazyColumn的快照看是否存在item
+    val listState = rememberLazyListState()
 
     LaunchedEffect(songList.errorMsg) {
         val message = songList.errorMsg ?: return@LaunchedEffect
@@ -86,11 +98,23 @@ fun HomeScreen(
         homeScreenViewModel.consumeErrorMsg()
     }
 
-    val playlists = listOf(
-        PlaylistUi("通勤节奏", "28 首歌曲", null),
-        PlaylistUi("午后放松", "35 首歌曲", null),
-        PlaylistUi("学习专注", "42 首歌曲", null)
-    )
+    LaunchedEffect(listState, songList.songs) {
+        snapshotFlow {
+            val triggerIndex = (songList.songs.lastIndex - 2).coerceAtLeast(0)
+            val triggerSongId = songList.songs.getOrNull(triggerIndex)?.songId ?: return@snapshotFlow false
+
+            val triggerKey = "hot_$triggerSongId"
+
+            listState.layoutInfo.visibleItemsInfo.any {
+                it.key == triggerKey
+            }
+        }
+            .distinctUntilChanged()
+            .filter { it }
+            .collect {
+                homeScreenViewModel.loadMoreHotSongs()
+            }
+    }
 
     PullToRefreshBox(
         isRefreshing = songList.isRefreshing,
@@ -124,14 +148,23 @@ fun HomeScreen(
                 top = 12.dp,
                 bottom = 150.dp
             ),
-            verticalArrangement = Arrangement.spacedBy(22.dp),
+//            verticalArrangement = Arrangement.spacedBy(22.dp),
+            state = listState
         ) {
             item {
                 DiscoverHeader()
             }
 
             item {
+                Spacer(modifier = Modifier.height(22.dp))
+            }
+
+            item {
                 SearchBar(onSearchClick)
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(22.dp))
             }
 
 //            item {
@@ -154,36 +187,82 @@ fun HomeScreen(
             }
 
             item {
+                Spacer(modifier = Modifier.height(22.dp))
+            }
+
+            item {
                 SectionHeader(title = "热门歌曲", action = "更多")
+            }
 
-                Spacer(modifier = Modifier.height(10.dp))
+            item {
+                Spacer(modifier = Modifier.height(22.dp))
+            }
 
+            itemsIndexed(
+                items = songList.songs,
+                key = { _, song -> "hot_${song.songId}" }
+            ) { index, song ->
+                val shape = when {
+                    songList.songs.size == 1 -> RoundedCornerShape(20.dp)
+                    index == 0 -> RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+                    index == songList.songs.size - 1 -> RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
+                    else -> RoundedCornerShape(0.dp)
+                }
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(shape)
                         .background(LocalMusicThemeColors.current.surface)
-                        .padding(vertical = 6.dp)
                 ) {
-                    songList.songs.forEachIndexed { index, song ->
-                        SongRow(
-                            song = song,
-                            onClick = {
-                                onSongClick(songList.songs, index)
-                            },
-                            onFavoriteSong = {
-                                homeScreenViewModel.doFavoriteEvent(index)
-                            }
-                        )
-
-                        if (index != songList.songs.lastIndex) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(start = 72.dp),
-                                color = LocalMusicThemeColors.current.border,
-                                thickness = 1.dp
-                            )
+                    SongRow(
+                        song = song,
+                        onClick = {
+                            onSongClick(SongListKey.Hot, songList.songs, index)
+                        },
+                        onFavoriteSong = {
+                            homeScreenViewModel.doFavoriteEvent(index)
                         }
+                    )
+
+                    if (index != songList.songs.lastIndex) {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(start = 72.dp),
+                            color = LocalMusicThemeColors.current.border,
+                            thickness = 1.dp
+                        )
                     }
+                }
+            }
+
+            /**
+             * 最下方如果在下滑还没拿到数据就转圈 --> 表示等待
+             */
+            if (songList.isLoading && songList.songs.isNotEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = LocalMusicThemeColors.current.primary,
+                            strokeWidth = 2.5.dp
+                        )
+                    }
+                }
+            } else if (songList.isEndReached && songList.songs.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "已经到底了",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        textAlign = TextAlign.Center,
+                        color = LocalMusicThemeColors.current.textSecondary,
+                        fontSize = 13.sp
+                    )
                 }
             }
         }
@@ -516,5 +595,4 @@ private fun SongRow(
         }
     }
 }
-
 

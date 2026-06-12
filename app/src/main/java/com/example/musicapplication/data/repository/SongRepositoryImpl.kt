@@ -16,6 +16,7 @@ import com.example.musicapplication.data.remote.dto.response.PageResponse
 import com.example.musicapplication.data.remote.dto.response.SongResponse
 import com.example.musicapplication.data.remote.mapper.toEntity
 import com.example.musicapplication.domain.mapper.toSongRecentPlayEntity
+import com.example.musicapplication.domain.model.PageLoadResult
 import com.example.musicapplication.domain.model.Song
 import com.example.musicapplication.domain.model.SongListKey
 import kotlinx.coroutines.flow.Flow
@@ -33,6 +34,7 @@ class SongRepositoryImpl @Inject constructor(
 ): SongRepository {
 
     private val TAG = "SongRepository"
+
     override fun observeSongs(listKey: SongListKey): Flow<List<Song>> {
         return songDao.observeSongsByList(listKey.value)
             .map { list ->
@@ -89,10 +91,14 @@ class SongRepositoryImpl @Inject constructor(
     override suspend fun loadMoreSongs(
         listKey: SongListKey,
         pageSize: Long
-    ): RepositoryWorkResult<Unit> {
+    ): RepositoryWorkResult<PageLoadResult> {
         val meta = songListMetaDao.getMeta(listKey.value)
         if (meta != null && meta.current >= meta.pages) {
-            return RepositoryWorkResult.Success(Unit)
+            return RepositoryWorkResult.Success(
+                PageLoadResult(
+                    isEndReached = true
+                )
+            )
         }
 
         val nextPage = (meta?.current ?: 0) + 1
@@ -104,11 +110,59 @@ class SongRepositoryImpl @Inject constructor(
                     page = result.data,
                     isRefresh = false
                 )
-                RepositoryWorkResult.Success(Unit)
+                RepositoryWorkResult.Success(
+                    PageLoadResult(
+                        isEndReached = result.data.current >= result.data.pages
+                ))
             }
 
             is RepositoryWorkResult.Failure -> result
         }
+    }
+
+    override suspend fun getSongPosition(
+        listKey: SongListKey,
+        songId: Long
+    ): Long? {
+        return songListDao.getPosition(listKey.value, songId)
+    }
+
+    override suspend fun ensureSongAtPosition(
+        listKey: SongListKey,
+        position: Long,
+        pageSize: Long
+    ): RepositoryWorkResult<Song?> {
+        if (position < 0) return RepositoryWorkResult.Success(null)
+
+        val localSong = songDao.getSongByListPosition(listKey.value, position)
+        if (localSong != null) {
+            return RepositoryWorkResult.Success(localSong.toSong())
+        }
+
+        val meta = songListMetaDao.getMeta(listKey.value)
+        if (meta != null && position >= meta.total) {
+            return RepositoryWorkResult.Success(null)
+        }
+
+        val pageNum = position / pageSize + 1
+
+        return when (val result = requestSongs(listKey, pageNum, pageSize)) {
+            is RepositoryWorkResult.Success -> {
+                savePageToLocal(
+                    listKey = listKey,
+                    page = result.data,
+                    isRefresh = false
+                )
+                RepositoryWorkResult.Success(
+                    songDao.getSongByListPosition(listKey.value, position)?.toSong()
+                )
+            }
+            is RepositoryWorkResult.Failure -> result
+        }
+    }
+
+    override suspend fun getSongListTotal(listKey: SongListKey): Long? {
+        return songListMetaDao.getMeta(listKey.value)?.total
     }
 
     /**
@@ -263,11 +317,7 @@ class SongRepositoryImpl @Inject constructor(
                 songListDao.clearList(listKey.value)
             }
 
-            val startPosition = if (isRefresh) {
-                0
-            } else {
-                songListDao.getMaxPosition(listKey.value) + 1
-            }
+            val startPosition = (page.current - 1) * page.size
 
             // 更新song_list_items表
             songListDao.upsertList(

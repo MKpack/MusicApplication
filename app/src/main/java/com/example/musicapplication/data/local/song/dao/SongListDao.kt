@@ -33,4 +33,12 @@ interface SongListDao {
 
     @Query("DELETE FROM song_list_items WHERE listKey = :listKey AND songId = :songId")
     suspend fun deleteItem(listKey: String, songId: Long)
+
+    @Query("""
+        SELECT position
+        FROM song_list_items
+        WHERE listKey = :listKey AND songId = :songId
+        LIMIT 1
+    """)
+    suspend fun getPosition(listKey: String, songId: Long): Long?
 }

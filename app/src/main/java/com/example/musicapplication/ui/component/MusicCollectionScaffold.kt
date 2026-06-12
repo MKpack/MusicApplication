@@ -21,7 +21,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -53,11 +55,13 @@ fun MusicCollectionScaffold(
     icon: ImageVector,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
+    listState: LazyListState? = null,
     playAllEnabled: Boolean = false,
     onPlayAllClick: () -> Unit = {},
     content: (LazyListScope.(listAreaModifier: Modifier) -> Unit)? = null
 ) {
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val lazyListState = listState ?: rememberLazyListState()
 
     BoxWithConstraints(
         modifier = modifier
@@ -85,6 +89,7 @@ fun MusicCollectionScaffold(
             ).coerceAtLeast(320.dp)
 
         LazyColumn(
+            state = lazyListState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 start = 18.dp,

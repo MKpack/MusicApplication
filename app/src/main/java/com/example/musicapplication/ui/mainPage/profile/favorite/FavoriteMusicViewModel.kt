@@ -1,11 +1,9 @@
 package com.example.musicapplication.ui.mainPage.profile.favorite
 
-import androidx.compose.ui.text.Paragraph
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.musicapplication.data.common.RepositoryWorkResult
 import com.example.musicapplication.data.repository.SongRepository
-import com.example.musicapplication.domain.model.PageResult
 import com.example.musicapplication.domain.model.Song
 import com.example.musicapplication.domain.model.SongListKey
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -17,13 +15,10 @@ import javax.inject.Inject
 
 data class SongListUiState(
     val songs: List<Song> = emptyList(),
-    val total: Long = 0,
-    val size: Long = 0,
-    val current: Long = 0,
-    val pages: Long = 0,
     val errorMsg: String? = null,
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
+    val isEndReached: Boolean = false
 )
 
 @HiltViewModel
@@ -53,10 +48,12 @@ class FavoriteMusicViewModel @Inject constructor(
         viewModelScope.launch {
             val state = _songListUiState.value
             if (state.isLoading) return@launch
+            if (state.isRefreshing) return@launch
             _songListUiState.value = _songListUiState.value.copy(
                 isLoading = true,
                 isRefreshing = isPullToRefresh,
-                errorMsg = null
+                errorMsg = null,
+                isEndReached = false
             )
 
             val result = songRepository.refreshSongs(SongListKey.Loved)
@@ -82,6 +79,8 @@ class FavoriteMusicViewModel @Inject constructor(
         viewModelScope.launch {
             val state = _songListUiState.value
             if (state.isLoading) return@launch
+            if (state.isRefreshing) return@launch
+            if (state.isEndReached) return@launch
             _songListUiState.value = _songListUiState.value.copy(
                 isLoading = true,
                 errorMsg = null
@@ -90,10 +89,16 @@ class FavoriteMusicViewModel @Inject constructor(
 
             when(result) {
                 is RepositoryWorkResult.Success -> {
-
+                    _songListUiState.value = _songListUiState.value.copy(
+                        isLoading = false,
+                        isEndReached = result.data.isEndReached
+                    )
                 }
                 is RepositoryWorkResult.Failure -> {
-
+                    _songListUiState.value = _songListUiState.value.copy(
+                        isLoading = false,
+                        errorMsg = result.message
+                    )
                 }
             }
         }
@@ -117,19 +122,6 @@ class FavoriteMusicViewModel @Inject constructor(
         }
     }
 
-
-    private fun PageResult<Song>.toSongListUiState(): SongListUiState {
-        return SongListUiState(
-            songs = records,
-            total = total,
-            size = size,
-            current = current,
-            pages = pages,
-            errorMsg = null,
-            isLoading = false,
-            isRefreshing = false
-        )
-    }
 
     fun consumeErrorMessage() {
         _songListUiState.value = _songListUiState.value.copy(

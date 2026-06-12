@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -35,6 +36,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.example.musicapplication.R
@@ -44,31 +46,54 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.musicapplication.domain.model.Song
+import com.example.musicapplication.domain.model.SongListKey
 import com.example.musicapplication.ui.component.MusicCollectionScaffold
 import com.example.musicapplication.ui.theme.LocalMusicThemeColors
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FavoriteMusicScreen(
     onBack: () -> Unit,
-    onSongClick: (songs: List<Song>, index: Int) -> Unit,
+    onSongClick: (listKey: SongListKey, songs: List<Song>, index: Int) -> Unit,
     modifier: Modifier = Modifier,
     favoriteMusicViewModel: FavoriteMusicViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val songListUiState by favoriteMusicViewModel.songListUiState.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
+    val listState = rememberLazyListState()
 
     LaunchedEffect(songListUiState.errorMsg) {
         val message = songListUiState.errorMsg ?: return@LaunchedEffect
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         favoriteMusicViewModel.consumeErrorMessage()
+    }
+
+    LaunchedEffect(listState, songListUiState.songs) {
+        snapshotFlow {
+            val triggerIndex = (songListUiState.songs.lastIndex - 2).coerceAtLeast(0)
+            val triggerSongId = songListUiState.songs.getOrNull(triggerIndex)?.songId
+                ?: return@snapshotFlow false
+            val triggerKey = "loved_$triggerSongId"
+
+            listState.layoutInfo.visibleItemsInfo.any { itemInfo ->
+                itemInfo.key == triggerKey
+            }
+        }
+            .distinctUntilChanged()
+            .filter { it }
+            .collect {
+                favoriteMusicViewModel.loadMoreLoveSongs()
+            }
     }
 
     PullToRefreshBox(
@@ -94,10 +119,11 @@ fun FavoriteMusicScreen(
             icon = Icons.Default.Favorite,
             onBack = onBack,
             modifier = Modifier.fillMaxSize(),
+            listState = listState,
             playAllEnabled = songListUiState.songs.isNotEmpty(),
             onPlayAllClick = {
                 if (songListUiState.songs.isNotEmpty()) {
-                    onSongClick(songListUiState.songs, 0)
+                    onSongClick(SongListKey.Loved, songListUiState.songs, 0)
                 }
             },
             content = if (songListUiState.songs.isEmpty()) {
@@ -106,18 +132,51 @@ fun FavoriteMusicScreen(
                 { _ ->
                     items(
                         items = songListUiState.songs,
-                        key = { it.songId }
+                        key = { "loved_${it.songId}" }
                     ) { song ->
                         FavoriteSongRow(
                             song = song,
                             onClick = {
-                                onSongClick(songListUiState.songs, songListUiState.songs.indexOf(song))
+                                onSongClick(
+                                    SongListKey.Loved,
+                                    songListUiState.songs,
+                                    songListUiState.songs.indexOf(song)
+                                )
                             },
                             onFavoriteClick = {
                                 favoriteMusicViewModel.doFavoriteEvent(songListUiState.songs.indexOf(song))
                                 favoriteMusicViewModel.refreshLovedSongs()
                             }
                         )
+                    }
+
+                    if (songListUiState.isLoading && songListUiState.songs.isNotEmpty()) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 14.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = LocalMusicThemeColors.current.primary,
+                                    strokeWidth = 2.5.dp
+                                )
+                            }
+                        }
+                    } else if (songListUiState.isEndReached && songListUiState.songs.isNotEmpty()) {
+                        item {
+                            Text(
+                                text = "已经到底了",
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 16.dp),
+                                textAlign = TextAlign.Center,
+                                color = LocalMusicThemeColors.current.textSecondary,
+                                fontSize = 13.sp
+                            )
+                        }
                     }
                 }
             }

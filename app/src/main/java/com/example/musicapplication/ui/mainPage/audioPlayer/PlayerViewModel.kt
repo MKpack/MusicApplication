@@ -10,6 +10,7 @@ import androidx.palette.graphics.Palette
 import com.example.musicapplication.R
 import com.example.musicapplication.domain.model.Song
 import com.example.musicapplication.domain.model.MusicSource
+import com.example.musicapplication.domain.model.SongListKey
 import com.example.musicapplication.domain.player.MediaControllerManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -36,6 +37,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import kotlin.random.Random
 
 
 enum class PlayMode {
@@ -103,6 +105,10 @@ class PlayerViewModel @Inject constructor(
     // 当前播放项在 songQueue 中的位置。注意它是队列位置，不是 songId。
     private val _currentIndex = MutableStateFlow(-1)
     val currentIndex = _currentIndex.asStateFlow()
+
+    private var playbackListKey: SongListKey? = null
+    private var playbackListPosition: Long? = null
+    private val playbackPageSize = 20L
 
     // indictor progress 进度
     val currentProgress = mediaControllerManager.currentProgress.stateIn(viewModelScope, SharingStarted.Lazily, 0f)
@@ -338,6 +344,8 @@ class PlayerViewModel @Inject constructor(
     fun playQueueSong(songs: List<Song>, index: Int) {
         if (songs.isEmpty()) return
         if (index !in songs.indices) return
+        playbackListKey = null
+        playbackListPosition = null
         val queueKeys = songs.map { nextQueueKey(it) }
         _originalQueue.value = songs
         _originalQueueKeys.value = queueKeys
@@ -360,6 +368,29 @@ class PlayerViewModel @Inject constructor(
             onSongStarted(songs[index])
         }
         savePlayerSnapshot()
+    }
+
+    fun playQueueSong(listKey: SongListKey, songs: List<Song>, index: Int) {
+        if (songs.isEmpty()) return
+        if (index !in songs.indices) return
+
+        val song = songs[index]
+        viewModelScope.launch {
+            val position = songRepository.getSongPosition(listKey, song.songId) ?: index.toLong()
+            playbackListKey = listKey
+            playbackListPosition = position
+
+            val queueKeys = songs.map { nextQueueKey(it) }
+            _originalQueue.value = songs
+            _originalQueueKeys.value = queueKeys
+            _songQueue.value = songs
+            _queueKeys.value = queueKeys
+            _currentIndex.value = index
+
+            mediaControllerManager.playQueue(songs, index)
+            onSongStarted(song)
+            savePlayerSnapshot()
+        }
     }
 
     // 构造随机播放队列。当前歌曲固定在第一位，剩余歌曲随机，避免切换随机后立刻换歌。
@@ -525,6 +556,8 @@ class PlayerViewModel @Inject constructor(
      */
     fun playSong(song: Song) {
         song.source ?: return
+        playbackListKey = null
+        playbackListPosition = null
         val queueKey = nextQueueKey(song)
         _songQueue.value = listOf(song)
         _queueKeys.value = listOf(queueKey)
@@ -571,6 +604,15 @@ class PlayerViewModel @Inject constructor(
 
     // 下一首
     fun playNext() {
+        val listKey = playbackListKey
+        val listPosition = playbackListPosition
+        if (listKey != null && listPosition != null) {
+            viewModelScope.launch {
+                playNextFromPagedSource(listKey, listPosition)
+            }
+            return
+        }
+
         val songs = _songQueue.value
         val index = _currentIndex.value
         if (songs.isEmpty()) return
@@ -599,6 +641,41 @@ class PlayerViewModel @Inject constructor(
         savePlayerSnapshot()
     }
 
+    private suspend fun playNextFromPagedSource(
+        listKey: SongListKey,
+        currentPosition: Long
+    ) {
+        val nextPosition = when (_playMode.value) {
+            PlayMode.Shuffle -> randomPosition(listKey, currentPosition) ?: return
+            PlayMode.Repeat,
+            PlayMode.RepeatOne,
+            PlayMode.Sequence -> currentPosition + 1
+        }
+
+        when (val result = songRepository.ensureSongAtPosition(listKey, nextPosition, playbackPageSize)) {
+            is RepositoryWorkResult.Success -> {
+                val song = result.data
+                if (song != null) {
+                    playPagedSourceSong(listKey, nextPosition, song)
+                    return
+                }
+
+                if (_playMode.value == PlayMode.Repeat || _playMode.value == PlayMode.RepeatOne) {
+                    val firstSong = songRepository.ensureSongAtPosition(listKey, 0, playbackPageSize)
+                    if (firstSong is RepositoryWorkResult.Success && firstSong.data != null) {
+                        playPagedSourceSong(listKey, 0, firstSong.data)
+                    }
+                } else {
+                    mediaControllerManager.pauseAtStart()
+                    savePlayerSnapshot()
+                }
+            }
+            is RepositoryWorkResult.Failure -> {
+                _songUiState.value = _songUiState.value.copy(errorMessage = result.message)
+            }
+        }
+    }
+
     private fun nextQueueKey(song: Song): String {
         // songId 可能重复，source 也可能重复，所以加自增 seed 让每个队列项实例都唯一。
         queueKeySeed += 1
@@ -607,6 +684,15 @@ class PlayerViewModel @Inject constructor(
 
     // 上一首
     fun playPrevious() {
+        val listKey = playbackListKey
+        val listPosition = playbackListPosition
+        if (listKey != null && listPosition != null) {
+            viewModelScope.launch {
+                playPreviousFromPagedSource(listKey, listPosition)
+            }
+            return
+        }
+
         val songs = _songQueue.value
         val index = _currentIndex.value
         if (songs.isEmpty()) return
@@ -630,6 +716,74 @@ class PlayerViewModel @Inject constructor(
         _currentIndex.value = nextIndex
         mediaControllerManager.playQueueIndex(nextIndex)
         onSongStarted(songs[nextIndex])
+        savePlayerSnapshot()
+    }
+
+    private suspend fun playPreviousFromPagedSource(
+        listKey: SongListKey,
+        currentPosition: Long
+    ) {
+        val nextPosition = when (_playMode.value) {
+            PlayMode.Shuffle -> randomPosition(listKey, currentPosition) ?: return
+            PlayMode.Repeat,
+            PlayMode.RepeatOne -> if (currentPosition > 0) currentPosition - 1 else {
+                val total = songRepository.getSongListTotal(listKey) ?: return
+                (total - 1).coerceAtLeast(0)
+            }
+            PlayMode.Sequence -> if (currentPosition > 0) currentPosition - 1 else return
+        }
+
+        when (val result = songRepository.ensureSongAtPosition(listKey, nextPosition, playbackPageSize)) {
+            is RepositoryWorkResult.Success -> {
+                result.data?.let { song ->
+                    playPagedSourceSong(listKey, nextPosition, song)
+                }
+            }
+            is RepositoryWorkResult.Failure -> {
+                _songUiState.value = _songUiState.value.copy(errorMessage = result.message)
+            }
+        }
+    }
+
+    private suspend fun randomPosition(
+        listKey: SongListKey,
+        currentPosition: Long
+    ): Long? {
+        val total = songRepository.getSongListTotal(listKey) ?: return null
+        if (total <= 0) return null
+        if (total == 1L) return 0L
+
+        var nextPosition: Long
+        do {
+            nextPosition = Random.nextLong(0, total)
+        } while (nextPosition == currentPosition)
+
+        return nextPosition
+    }
+
+    private fun playPagedSourceSong(
+        listKey: SongListKey,
+        position: Long,
+        song: Song
+    ) {
+        playbackListKey = listKey
+        playbackListPosition = position
+
+        val currentQueue = _songQueue.value
+        val existingIndex = currentQueue.indexOfFirst { it.songId == song.songId }
+        if (existingIndex >= 0) {
+            _currentIndex.value = existingIndex
+            mediaControllerManager.playQueueIndex(existingIndex)
+        } else {
+            val newQueue = currentQueue + song
+            val newKeys = _queueKeys.value + nextQueueKey(song)
+            _songQueue.value = newQueue
+            _queueKeys.value = newKeys
+            _currentIndex.value = newQueue.lastIndex
+            mediaControllerManager.playQueue(newQueue, newQueue.lastIndex)
+        }
+
+        onSongStarted(song)
         savePlayerSnapshot()
     }
 

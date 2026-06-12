@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -41,6 +42,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +54,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -59,19 +62,23 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.musicapplication.R
 import com.example.musicapplication.domain.model.Song
+import com.example.musicapplication.domain.model.SongListKey
 import com.example.musicapplication.ui.theme.LocalMusicThemeColors
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SearchScreen(
     onBack: () -> Unit,
-    onSongClick: (songs: List<Song>, index: Int) -> Unit,
+    onSongClick: (listKey: SongListKey?, songs: List<Song>, index: Int) -> Unit,
     modifier: Modifier = Modifier,
     searchViewModel: SearchViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
     val uiState by searchViewModel.uiState.collectAsState()
     val focusRequester = remember { FocusRequester() }
+    val listState = rememberLazyListState()
 
     LaunchedEffect(uiState.errorMsg) {
         val message = uiState.errorMsg ?: return@LaunchedEffect
@@ -79,7 +86,28 @@ fun SearchScreen(
         searchViewModel.consumeErrorMessage()
     }
 
+    LaunchedEffect(listState, uiState.keyword, uiState.songs) {
+        snapshotFlow {
+            if (uiState.keyword.isBlank()) return@snapshotFlow false
+
+            val triggerIndex = (uiState.songs.lastIndex - 2).coerceAtLeast(0)
+            val triggerSongId = uiState.songs.getOrNull(triggerIndex)?.songId
+                ?: return@snapshotFlow false
+            val triggerKey = "search_$triggerSongId"
+
+            listState.layoutInfo.visibleItemsInfo.any { itemInfo ->
+                itemInfo.key == triggerKey
+            }
+        }
+            .distinctUntilChanged()
+            .filter { it }
+            .collect {
+                searchViewModel.loadMoreSearchSongs()
+            }
+    }
+
     LazyColumn(
+        state = listState,
         modifier = modifier
             .fillMaxSize()
             .background(
@@ -122,7 +150,7 @@ fun SearchScreen(
                         song = song,
                         onClick = {
                             searchViewModel.recordSearchSong(song)
-                            onSongClick(uiState.recentSongs, index)
+                            onSongClick(null, uiState.recentSongs, index)
                         },
                         onFavoriteClick = {
                             searchViewModel.doFavoriteEvent(song)
@@ -130,25 +158,6 @@ fun SearchScreen(
                     )
                 }
             }
-
-//            item {
-//                SearchSection(title = "热门搜索") {
-//                    FlowRow(
-//                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-//                        verticalArrangement = Arrangement.spacedBy(10.dp)
-//                    ) {
-//                        hotKeywords.forEach { text ->
-//                            SearchChip(
-//                                text = text,
-//                                onClick = {
-//                                    searchViewModel.onKeywordChange(text)
-//                                    searchViewModel.searchImmediately(text)
-//                                }
-//                            )
-//                        }
-//                    }
-//                }
-//            }
         } else if (uiState.isLoading && uiState.songs.isEmpty()) {
             item {
                 SearchLoading()
@@ -160,18 +169,47 @@ fun SearchScreen(
         } else {
             itemsIndexed(
                 items = uiState.songs,
-                key = { _, song -> song.songId }
+                key = { _, song -> "search_${song.songId}" }
             ) { index, song ->
                 SearchSongRow(
                     song = song,
                     onClick = {
                         searchViewModel.recordSearchSong(song)
-                        onSongClick(uiState.songs, index)
+                        onSongClick(SongListKey.Search(uiState.keyword.trim()), uiState.songs, index)
                     },
                     onFavoriteClick = {
                         searchViewModel.doFavoriteEvent(song)
                     }
                 )
+            }
+
+            if (uiState.isLoading && uiState.songs.isNotEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = LocalMusicThemeColors.current.primary,
+                            strokeWidth = 2.5.dp
+                        )
+                    }
+                }
+            } else if (uiState.isEndReached && uiState.songs.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "已经到底了",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 16.dp),
+                        textAlign = TextAlign.Center,
+                        color = LocalMusicThemeColors.current.textSecondary,
+                        fontSize = 13.sp
+                    )
+                }
             }
         }
     }
@@ -315,62 +353,6 @@ private fun SearchHistoryRow(
     }
 }
 
-@Composable
-private fun SearchChip(
-    text: String,
-    onClick: () -> Unit
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(18.dp))
-            .background(LocalMusicThemeColors.current.surface)
-            .border(1.dp, LocalMusicThemeColors.current.border, RoundedCornerShape(18.dp))
-            .clickable(
-                interactionSource = interactionSource,
-                indication = null,
-                onClick = onClick
-            )
-            .padding(horizontal = 16.dp, vertical = 10.dp)
-    ) {
-        Text(
-            text = text,
-            color = LocalMusicThemeColors.current.textPrimary,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold
-        )
-    }
-}
-
-@Composable
-private fun SearchResultPlaceholder(
-    keyword: String
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
-            .background(LocalMusicThemeColors.current.surface)
-            .border(1.dp, LocalMusicThemeColors.current.border, RoundedCornerShape(22.dp))
-            .padding(horizontal = 18.dp, vertical = 22.dp)
-    ) {
-        Text(
-            text = "搜索结果",
-            color = LocalMusicThemeColors.current.textPrimary,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "“$keyword” 的结果会显示在这里",
-            color = LocalMusicThemeColors.current.textSecondary,
-            fontSize = 14.sp
-        )
-    }
-}
 
 @Composable
 private fun SearchLoading() {

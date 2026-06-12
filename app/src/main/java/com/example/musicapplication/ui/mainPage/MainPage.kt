@@ -169,8 +169,8 @@ fun MainPage(
                             innerPadding
                         ),
                         context = context,
-                        onSongClick = { songs, index ->
-                            playerViewModel.playQueueSong(songs, index)
+                        onSongClick = { listKey, songs, index ->
+                            playerViewModel.playQueueSong(listKey, songs, index)
                         },
                         onSearchClick = {
                             navController.navigate(RouterConfig.SEARCH)
@@ -180,8 +180,12 @@ fun MainPage(
                 composable(RouterConfig.SEARCH) {
                     SearchScreen(
                         onBack = { navController.popBackStack() },
-                        onSongClick = { songs, index ->
-                            playerViewModel.playQueueSong(songs, index)
+                        onSongClick = { listKey, songs, index ->
+                            if (listKey == null) {
+                                playerViewModel.playQueueSong(songs, index)
+                            } else {
+                                playerViewModel.playQueueSong(listKey, songs, index)
+                            }
                         }
                     )
                 }
@@ -224,8 +228,8 @@ fun MainPage(
                 composable(ProfileRoute.PROFILE_FAVORITE) {
                     FavoriteMusicScreen(
                         onBack = { navController.popBackStack() },
-                        onSongClick = { songs, index ->
-                            playerViewModel.playQueueSong(songs, index)
+                        onSongClick = { listKey, songs, index ->
+                            playerViewModel.playQueueSong(listKey, songs, index)
                         }
                     )
                 }

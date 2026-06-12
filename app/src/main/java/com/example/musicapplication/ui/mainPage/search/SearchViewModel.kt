@@ -21,7 +21,8 @@ data class SearchUiState(
     val recentSongs: List<Song> = emptyList(),
     val isLoading: Boolean = false,
     val errorMsg: String? = null,
-    val hasSearched: Boolean = false
+    val hasSearched: Boolean = false,
+    val isEndReached: Boolean = false
 )
 
 @HiltViewModel
@@ -56,7 +57,8 @@ class SearchViewModel @Inject constructor(
                 songs = emptyList(),
                 isLoading = false,
                 errorMsg = null,
-                hasSearched = false
+                hasSearched = false,
+                isEndReached = false
             )
             return
         }
@@ -114,6 +116,38 @@ class SearchViewModel @Inject constructor(
         }
     }
 
+    fun loadMoreSearchSongs() {
+        val keyword = _uiState.value.keyword.trim()
+        if (keyword.isBlank()) return
+
+        viewModelScope.launch {
+            val state = _uiState.value
+            if (state.isLoading) return@launch
+            if (state.isEndReached) return@launch
+
+            _uiState.value = state.copy(
+                isLoading = true,
+                errorMsg = null
+            )
+
+            when (val result = songRepository.loadMoreSongs(SongListKey.Search(keyword))) {
+                is RepositoryWorkResult.Success -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        isEndReached = result.data.isEndReached
+                    )
+                }
+
+                is RepositoryWorkResult.Failure -> {
+                    _uiState.value = _uiState.value.copy(
+                        isLoading = false,
+                        errorMsg = result.message
+                    )
+                }
+            }
+        }
+    }
+
     private suspend fun search(keyword: String) {
         val listKey = SongListKey.Search(keyword)
         observeSearchResult(listKey)
@@ -122,7 +156,8 @@ class SearchViewModel @Inject constructor(
             keyword = keyword,
             isLoading = true,
             errorMsg = null,
-            hasSearched = true
+            hasSearched = true,
+            isEndReached = false
         )
 
         when (val result = songRepository.refreshSongs(listKey)) {

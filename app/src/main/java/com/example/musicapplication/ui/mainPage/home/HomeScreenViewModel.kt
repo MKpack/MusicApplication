@@ -15,13 +15,10 @@ import javax.inject.Inject
 
 data class SongListUiState(
     val songs: List<Song> = emptyList(),
-    val total: Long = 0,
-    val size: Long = 0,
-    val current: Long = 0,
-    val pages: Long = 0,
     val errorMsg: String? = null,
     val isLoading: Boolean = false,
-    val isRefreshing: Boolean = false
+    val isRefreshing: Boolean = false,
+    val isEndReached: Boolean = false
 )
 
 
@@ -60,7 +57,8 @@ class HomeScreenViewModel @Inject constructor(
             _songListUiState.value = state.copy(
                 isLoading = !isPullToRefresh,
                 isRefreshing = isPullToRefresh,
-                errorMsg = null
+                errorMsg = null,
+                isEndReached = false
             )
 
             val result = songRepository.refreshSongs(SongListKey.Hot)
@@ -85,9 +83,12 @@ class HomeScreenViewModel @Inject constructor(
     }
 
     fun loadMoreHotSongs() {
+        Log.d(TAG, "loadMoreHotSongs begin")
         viewModelScope.launch {
             val state = _songListUiState.value
             if (state.isLoading) return@launch
+            if (state.isRefreshing) return@launch
+            if (state.isEndReached) return@launch
             _songListUiState.value = state.copy(
                 isLoading = true,
                 errorMsg = null
@@ -96,12 +97,14 @@ class HomeScreenViewModel @Inject constructor(
             when(result) {
                 is RepositoryWorkResult.Success -> {
                     _songListUiState.value = _songListUiState.value.copy(
-                        isLoading = false
+                        isLoading = false,
+                        isEndReached = result.data.isEndReached
                     )
                 }
                 is RepositoryWorkResult.Failure -> {
                     _songListUiState.value = _songListUiState.value.copy(
                         isLoading = false,
+                        isEndReached = false,
                         errorMsg = result.message
                     )
                 }
