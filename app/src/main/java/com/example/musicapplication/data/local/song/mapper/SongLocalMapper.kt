@@ -5,6 +5,8 @@ import com.example.musicapplication.data.local.song.entity.SongRecentPlayEntity
 import com.example.musicapplication.domain.model.MusicSource
 import com.example.musicapplication.domain.model.Song
 import androidx.core.net.toUri
+import com.example.musicapplication.data.local.song.entity.DownloadSongEntity
+import java.io.File
 
 /**
  * 后端传输的歌曲实体转Song
@@ -41,5 +43,21 @@ fun SongRecentPlayEntity.toSong(): Song {
         isLoved = isLoved,
         cover = cover,
         source = sourceValue
+    )
+}
+
+
+fun DownloadSongEntity.toSong() : Song {
+    return Song(
+        songId = songId,
+        songTitle = title,
+        singer = singer,
+        isLoved = false,
+        cover = localCoverPath,
+        lyric = localLyricPath,
+        source = MusicSource.Local(
+            id = songId.toInt(),
+            uri = File(localAudioPath).toUri()
+        )
     )
 }

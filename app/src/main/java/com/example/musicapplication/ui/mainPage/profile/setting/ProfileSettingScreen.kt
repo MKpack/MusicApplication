@@ -92,27 +92,27 @@ fun ProfileSettingScreen(
             SettingTopBar(onBack = onBack)
         }
 
-        item {
-            SettingGroup(
-                title = "播放设置",
-                items = listOf(
-                    SettingItem.SwitchItem(
-                        title = "自动记录最近播放",
-                        subtitle = "播放成功后写入本地最近播放",
-                        icon = Icons.Default.History,
-                        checked = autoRecordRecent,
-                        onCheckedChange = { autoRecordRecent = it }
-                    ),
-                    SettingItem.SwitchItem(
-                        title = "记住播放进度",
-                        subtitle = "下次打开时恢复到上次播放位置",
-                        icon = Icons.Default.PlayCircle,
-                        checked = rememberProgress,
-                        onCheckedChange = { rememberProgress = it }
-                    )
-                )
-            )
-        }
+//        item {
+//            SettingGroup(
+//                title = "播放设置",
+//                items = listOf(
+//                    SettingItem.SwitchItem(
+//                        title = "自动记录最近播放",
+//                        subtitle = "播放成功后写入本地最近播放",
+//                        icon = Icons.Default.History,
+//                        checked = autoRecordRecent,
+//                        onCheckedChange = { autoRecordRecent = it }
+//                    ),
+//                    SettingItem.SwitchItem(
+//                        title = "记住播放进度",
+//                        subtitle = "下次打开时恢复到上次播放位置",
+//                        icon = Icons.Default.PlayCircle,
+//                        checked = rememberProgress,
+//                        onCheckedChange = { rememberProgress = it }
+//                    )
+//                )
+//            )
+//        }
 
         item {
             SettingGroup(

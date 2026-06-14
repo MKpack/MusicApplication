@@ -38,4 +38,7 @@ object LocalDatabaseModule {
 
     @Provides
     fun provideSongRecentPlayDao(db: SongDatabase) = db.songRecentPlayDao()
+
+    @Provides
+    fun provideDownloadSongDao(db: SongDatabase) = db.downloadSongDao()
 }

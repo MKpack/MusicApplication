@@ -1,5 +1,7 @@
 package com.example.musicapplication.ui.mainPage.profile.about
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Storage
@@ -34,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,6 +48,8 @@ fun AboutMusicScreen(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
@@ -75,7 +81,7 @@ fun AboutMusicScreen(
             AboutInfoCard(
                 icon = Icons.Default.LibraryMusic,
                 title = "音乐能力",
-                body = "支持在线歌曲、本地音乐、喜欢列表和最近播放。最近播放保存在本机，重复播放同一首歌也会保留记录。"
+                body = "支持在线歌曲、本地音乐、喜欢列表、最近播放和分页播放队列。播放界面会跟随当前主题色保持一致。"
             )
         }
 
@@ -83,7 +89,7 @@ fun AboutMusicScreen(
             AboutInfoCard(
                 icon = Icons.Default.Storage,
                 title = "数据说明",
-                body = "在线歌曲来自服务端返回的数据；本地音乐只通过设备 Uri 播放，不会上传到服务器。"
+                body = "在线歌曲来自服务端返回的数据；下载歌曲建议保存在 App 专属目录，本地音乐只通过设备 Uri 播放，不会上传到服务器。"
             )
         }
 
@@ -92,6 +98,23 @@ fun AboutMusicScreen(
                 icon = Icons.Default.VerifiedUser,
                 title = "隐私",
                 body = "账号资料和喜欢列表与登录状态相关；本地播放历史、外部打开音乐记录只存放在当前设备。"
+            )
+        }
+
+        item {
+            AboutInfoCard(
+                icon = Icons.Default.Email,
+                title = "反馈与建议",
+                body = "support@sharedmusic.app",
+                onClick = {
+                    val intent = Intent(Intent.ACTION_SENDTO).apply {
+                        data = Uri.parse("mailto:support@sharedmusic.app")
+                        putExtra(Intent.EXTRA_SUBJECT, "Shared Music 反馈")
+                    }
+                    runCatching {
+                        context.startActivity(intent)
+                    }
+                }
             )
         }
     }
@@ -123,7 +146,7 @@ private fun AboutTopBar(
         }
 
         Text(
-            text = "关于音乐",
+            text = "关于",
             color = LocalMusicThemeColors.current.textPrimary,
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
@@ -161,7 +184,7 @@ private fun AppIdentityCard() {
         Spacer(modifier = Modifier.height(14.dp))
 
         Text(
-            text = "MusicSource",
+            text = "Shared Music",
             color = LocalMusicThemeColors.current.textPrimary,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold
@@ -181,14 +204,22 @@ private fun AppIdentityCard() {
 private fun AboutInfoCard(
     icon: ImageVector,
     title: String,
-    body: String
+    body: String,
+    onClick: (() -> Unit)? = null
 ) {
+    val clickableModifier = if (onClick != null) {
+        Modifier.clickable(onClick = onClick)
+    } else {
+        Modifier
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(22.dp))
             .background(LocalMusicThemeColors.current.surface)
             .border(1.dp, LocalMusicThemeColors.current.border, RoundedCornerShape(22.dp))
+            .then(clickableModifier)
             .padding(16.dp),
         verticalAlignment = Alignment.Top
     ) {

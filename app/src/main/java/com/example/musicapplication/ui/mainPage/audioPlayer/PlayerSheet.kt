@@ -1,6 +1,7 @@
 package com.example.musicapplication.ui.mainPage.audioPlayer
 
 import android.content.Context
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.annotation.OptIn
 import androidx.compose.animation.core.Animatable
@@ -97,6 +98,12 @@ fun PlayerSheet(
     val progress = remember { Animatable(0f) }
     val p = progress.value.coerceIn(0f, 1f)
 
+
+    LaunchedEffect(Unit) {
+        playerViewModel.message.collect { it ->
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     LaunchedEffect(song.cover) {
         playerViewModel.updateColorsFromSongCover()
@@ -428,7 +435,11 @@ private fun AppleMusicPlayerMorph(
 
         SongMoreActionSheet(
             visible = showMoreActions,
-            onDismiss = { showMoreActions = false }
+            onDismiss = { showMoreActions = false },
+            onDownloadMusic = {
+                showMoreActions = false
+                playerViewModel.downloadCurrentSong()
+            }
         )
     }
 }
@@ -881,7 +892,8 @@ private fun QueueNowPlayingHeader(
 @Composable
 private fun SongMoreActionSheet(
     visible: Boolean,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onDownloadMusic: () -> Unit
 ) {
     BackHandler(enabled = visible) {
         onDismiss()
@@ -944,7 +956,8 @@ private fun SongMoreActionSheet(
                 iconBackground = LocalMusicThemeColors.current.primarySoft,
                 iconTint = LocalMusicThemeColors.current.primary,
                 titleColor = LocalMusicThemeColors.current.textPrimary,
-                subtitleColor = LocalMusicThemeColors.current.textSecondary
+                subtitleColor = LocalMusicThemeColors.current.textSecondary,
+                onEvent = onDownloadMusic
             )
 
             SongMoreActionRow(
@@ -954,7 +967,8 @@ private fun SongMoreActionSheet(
                 iconBackground = LocalMusicThemeColors.current.primarySoft,
                 iconTint = LocalMusicThemeColors.current.primary,
                 titleColor = LocalMusicThemeColors.current.textPrimary,
-                subtitleColor = LocalMusicThemeColors.current.textSecondary
+                subtitleColor = LocalMusicThemeColors.current.textSecondary,
+                onEvent = { }
             )
 
             SongMoreActionRow(
@@ -964,7 +978,8 @@ private fun SongMoreActionSheet(
                 iconBackground = LocalMusicThemeColors.current.primarySoft,
                 iconTint = LocalMusicThemeColors.current.primary,
                 titleColor = LocalMusicThemeColors.current.textPrimary,
-                subtitleColor = LocalMusicThemeColors.current.textSecondary
+                subtitleColor = LocalMusicThemeColors.current.textSecondary,
+                onEvent = { }
             )
         }
     }
@@ -978,7 +993,8 @@ private fun SongMoreActionRow(
     iconBackground: Color,
     iconTint: Color,
     titleColor: Color,
-    subtitleColor: Color
+    subtitleColor: Color,
+    onEvent: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -988,7 +1004,7 @@ private fun SongMoreActionRow(
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
-                onClick = {}
+                onClick = { onEvent() }
             )
             .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically

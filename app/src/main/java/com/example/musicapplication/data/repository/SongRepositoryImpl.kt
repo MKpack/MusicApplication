@@ -3,11 +3,14 @@ package com.example.musicapplication.data.repository
 import android.util.Log
 import androidx.room.withTransaction
 import com.example.musicapplication.data.common.RepositoryWorkResult
+import com.example.musicapplication.data.local.download.DownloadUtils
+import com.example.musicapplication.data.local.song.dao.DownloadSongDao
 import com.example.musicapplication.data.local.song.dao.SongDao
 import com.example.musicapplication.data.local.song.dao.SongListDao
 import com.example.musicapplication.data.local.song.dao.SongListMetaDao
 import com.example.musicapplication.data.local.song.dao.SongRecentPlayDao
 import com.example.musicapplication.data.local.song.database.SongDatabase
+import com.example.musicapplication.data.local.song.entity.DownloadSongEntity
 import com.example.musicapplication.data.local.song.entity.SongListItemEntity
 import com.example.musicapplication.data.local.song.entity.SongListMetaEntity
 import com.example.musicapplication.data.local.song.mapper.toSong
@@ -16,6 +19,7 @@ import com.example.musicapplication.data.remote.dto.response.PageResponse
 import com.example.musicapplication.data.remote.dto.response.SongResponse
 import com.example.musicapplication.data.remote.mapper.toEntity
 import com.example.musicapplication.domain.mapper.toSongRecentPlayEntity
+import com.example.musicapplication.domain.model.MusicSource
 import com.example.musicapplication.domain.model.PageLoadResult
 import com.example.musicapplication.domain.model.Song
 import com.example.musicapplication.domain.model.SongListKey
@@ -30,7 +34,9 @@ class SongRepositoryImpl @Inject constructor(
     private val songDao: SongDao,
     private val songListDao: SongListDao,
     private val songListMetaDao: SongListMetaDao,
-    private val songRecentPlayDao: SongRecentPlayDao
+    private val songRecentPlayDao: SongRecentPlayDao,
+    private val downloadSongDao: DownloadSongDao,
+    private val downloadUtils: DownloadUtils
 ): SongRepository {
 
     private val TAG = "SongRepository"
@@ -60,6 +66,17 @@ class SongRepositoryImpl @Inject constructor(
         return songRecentPlayDao.observeRecentSongs(100).map { songRecentPlayEntities ->
             songRecentPlayEntities.map { songRecentPlayEntity ->
                 songRecentPlayEntity.toSong()
+            }
+        }
+    }
+
+    /**
+     * observe 下载音乐列表
+     */
+    override fun observeDownloadSongs(): Flow<List<Song>> {
+        return downloadSongDao.observeDownloadSongs().map { downloadSongEntities ->
+            downloadSongEntities.map { downloadSongEntity ->
+                downloadSongEntity.toSong()
             }
         }
     }
@@ -117,6 +134,31 @@ class SongRepositoryImpl @Inject constructor(
             }
 
             is RepositoryWorkResult.Failure -> result
+        }
+    }
+
+    /**
+     * 下载远程歌曲到本地
+     */
+    override suspend fun upsertDownloadSongs(song: Song): RepositoryWorkResult<String> {
+        try {
+            val files = downloadUtils.downloadSongFiles(song)
+
+            downloadSongDao.upsertDownloadSong(
+                DownloadSongEntity(
+                    songId = song.songId,
+                    singer = song.singer,
+                    title = song.songTitle,
+                    localAudioPath = files.audioPath,
+                    localCoverPath = files.coverPath,
+                    localLyricPath = files.lyricPath,
+                    fileSize = files.fileSize,
+                    downloadedAt = System.currentTimeMillis()
+                )
+            )
+            return RepositoryWorkResult.Success("下载成功")
+        } catch (e: Exception) {
+            return RepositoryWorkResult.Failure("下载失败", throwable = e)
         }
     }
 
@@ -269,6 +311,13 @@ class SongRepositoryImpl @Inject constructor(
      */
     override suspend fun clearRecentPlay() {
         songRecentPlayDao.clearRecentSongs()
+    }
+
+    override suspend fun deleteDownloadSongs(songIds: List<Long>) {
+        for (songId in songIds) {
+            downloadUtils.deleteSongFiles(songId)
+        }
+        downloadSongDao.deleteDownloadSongs(songIds)
     }
 
 

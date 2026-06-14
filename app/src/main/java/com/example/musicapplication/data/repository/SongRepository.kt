@@ -14,6 +14,8 @@ interface SongRepository {
 
     fun observeRecentSongs(): Flow<List<Song>>
 
+    fun observeDownloadSongs() : Flow<List<Song>>
+
     suspend fun refreshSongs(
         listKey: SongListKey,
         pageSize: Long = 5
@@ -23,6 +25,8 @@ interface SongRepository {
         listKey: SongListKey,
         pageSize: Long = 5
     ): RepositoryWorkResult<PageLoadResult>
+
+    suspend fun upsertDownloadSongs(song: Song) : RepositoryWorkResult<String>
 
     suspend fun getSongPosition(
         listKey: SongListKey,
@@ -45,4 +49,6 @@ interface SongRepository {
     suspend fun increaseSongPlayCount(songId: Long): RepositoryWorkResult<Unit>
 
     suspend fun clearRecentPlay()
+
+    suspend fun deleteDownloadSongs(songIds: List<Long>)
 }

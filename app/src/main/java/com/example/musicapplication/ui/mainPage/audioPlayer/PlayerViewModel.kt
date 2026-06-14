@@ -32,11 +32,14 @@ import com.example.musicapplication.data.repository.UserStatRepository
 import com.example.musicapplication.utils.LrcParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.File
 import kotlin.random.Random
 
 
@@ -341,6 +344,7 @@ class PlayerViewModel @Inject constructor(
     }
 
     // 外部页面点击某个列表时调用。这里会创建一个新的播放队列，并给队列每一项生成稳定 key。
+    // 用于完整队列
     fun playQueueSong(songs: List<Song>, index: Int) {
         if (songs.isEmpty()) return
         if (index !in songs.indices) return
@@ -370,6 +374,7 @@ class PlayerViewModel @Inject constructor(
         savePlayerSnapshot()
     }
 
+    // 用于分页队列
     fun playQueueSong(listKey: SongListKey, songs: List<Song>, index: Int) {
         if (songs.isEmpty()) return
         if (index !in songs.indices) return
@@ -521,15 +526,20 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             _lyricsUiState.value = LyricsUiState(isLoading = true)
             try {
-                val request = Request.Builder()
-                    .url(lyricUrl)
-                    .build()
+                // 新增了本地lyric打开方式
+                val text = if (lyricUrl.startsWith("http")) {
+                    val request = Request.Builder()
+                        .url(lyricUrl)
+                        .build()
 
-                val text = withContext(Dispatchers.IO) {
-                    okHttpClient.newCall(request).execute().use { response ->
-                        if (!response.isSuccessful) return@withContext null
-                        response.body?.string()
+                    withContext(Dispatchers.IO) {
+                        okHttpClient.newCall(request).execute().use { response ->
+                            if (!response.isSuccessful) return@withContext null
+                            response.body?.string()
+                        }
                     }
+                } else {
+                    File(lyricUrl).takeIf { it.exists() }?.readText()
                 }
 
                 val lines = text
@@ -861,6 +871,29 @@ class PlayerViewModel @Inject constructor(
                     playModeName = _playMode.value.name
                 )
             )
+        }
+    }
+
+    // 增加下载方法
+    // MutableSharedFlow适合表示事件，可以发送事件
+    private val _message = MutableSharedFlow<String>()
+    val message = _message.asSharedFlow()
+
+    fun downloadCurrentSong() {
+        val currentSong = _song.value
+
+        viewModelScope.launch {
+            _message.emit("开始下载")
+            when (val result = songRepository.upsertDownloadSongs(currentSong)) {
+                is RepositoryWorkResult.Success -> {
+                    // 发送一次性事件
+                    _message.emit(result.data)
+                }
+
+                is RepositoryWorkResult.Failure -> {
+                    _message.emit(result.message)
+                }
+            }
         }
     }
 

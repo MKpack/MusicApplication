@@ -222,7 +222,10 @@ fun MainPage(
                 }
                 composable(ProfileRoute.PROFILE_DOWNLOAD) {
                     DownloadMusicScreen(
-                        onBack = { navController.popBackStack() }
+                        onBack = { navController.popBackStack() },
+                        onSongClick = { songs, index ->
+                            playerViewModel.playQueueSong(songs, index)
+                        }
                     )
                 }
                 composable(ProfileRoute.PROFILE_FAVORITE) {
