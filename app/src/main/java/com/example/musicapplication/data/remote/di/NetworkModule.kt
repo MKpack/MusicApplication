@@ -5,6 +5,7 @@ import android.content.Context
 import com.example.musicapplication.BuildConfig
 import com.example.musicapplication.data.local.token.TokenStore
 import com.example.musicapplication.data.remote.api.AuthApi
+import com.example.musicapplication.data.remote.api.AppNotificationApi
 import com.example.musicapplication.data.remote.api.MainPageApi
 import com.example.musicapplication.data.remote.api.ProfileApi
 import com.example.musicapplication.data.remote.api.SongApi
@@ -166,5 +167,10 @@ object NetworkModule {
     fun provideUserStatApi(retrofit: Retrofit): UserStatApi {
         return retrofit.create(UserStatApi::class.java)
     }
-}
 
+    @Provides
+    @Singleton
+    fun provideAppNotificationApi(retrofit: Retrofit): AppNotificationApi {
+        return retrofit.create(AppNotificationApi::class.java)
+    }
+}

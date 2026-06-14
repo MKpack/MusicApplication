@@ -32,12 +32,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
@@ -63,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
+import com.example.musicapplication.domain.model.AppNotification
 import com.example.musicapplication.domain.model.Song
 import com.example.musicapplication.domain.model.SongListKey
 import com.example.musicapplication.ui.theme.LocalMusicThemeColors
@@ -88,6 +91,7 @@ fun HomeScreen(
     homeScreenViewModel: HomeScreenViewModel = hiltViewModel()
 ) {
     val songList by homeScreenViewModel.songListUiState.collectAsState()
+    val notificationUiState by homeScreenViewModel.notificationUiState.collectAsState()
     val pullToRefreshState = rememberPullToRefreshState()
     // 可以获取lazyColumn的快照看是否存在item
     val listState = rememberLazyListState()
@@ -96,6 +100,12 @@ fun HomeScreen(
         val message = songList.errorMsg ?: return@LaunchedEffect
         Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         homeScreenViewModel.consumeErrorMsg()
+    }
+
+    LaunchedEffect(notificationUiState.notificationMsg) {
+        val message = notificationUiState.notificationMsg ?: return@LaunchedEffect
+        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        homeScreenViewModel.consumeNotificationMsg()
     }
 
     LaunchedEffect(listState, songList.songs) {
@@ -152,7 +162,11 @@ fun HomeScreen(
             state = listState
         ) {
             item {
-                DiscoverHeader()
+                DiscoverHeader(
+                    onNotificationClick = {
+                        homeScreenViewModel.loadLatestNotificationByClick()
+                    }
+                )
             }
 
             item {
@@ -267,6 +281,16 @@ fun HomeScreen(
             }
         }
     }
+
+    val notification = notificationUiState.notification
+    if (notificationUiState.showNotificationDialog && notification != null) {
+        AppNotificationDialog(
+            notification = notification,
+            onDismiss = {
+                homeScreenViewModel.dismissNotificationDialog()
+            }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -320,7 +344,9 @@ private fun DiscoverRefreshIndicator(
 }
 
 @Composable
-private fun DiscoverHeader() {
+private fun DiscoverHeader(
+    onNotificationClick: () -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -344,7 +370,7 @@ private fun DiscoverHeader() {
         }
 
         IconButton(
-            onClick = {},
+            onClick = onNotificationClick,
             modifier = Modifier
                 .size(42.dp)
                 .clip(CircleShape)
@@ -358,6 +384,50 @@ private fun DiscoverHeader() {
             )
         }
     }
+}
+
+@Composable
+private fun AppNotificationDialog(
+    notification: AppNotification,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = notification.title,
+                color = LocalMusicThemeColors.current.textPrimary,
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column {
+                Text(
+                    text = notification.content.ifBlank { "暂无通知内容" },
+                    color = LocalMusicThemeColors.current.textSecondary,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp
+                )
+
+                notification.createdAt?.takeIf { it.isNotBlank() }?.let { createdAt ->
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = createdAt,
+                        color = LocalMusicThemeColors.current.textSecondary,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(
+                    text = "知道了",
+                    color = LocalMusicThemeColors.current.primary
+                )
+            }
+        }
+    )
 }
 
 
@@ -595,4 +665,3 @@ private fun SongRow(
         }
     }
 }
-

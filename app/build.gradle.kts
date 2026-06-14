@@ -15,7 +15,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.musicapplication"
+        applicationId = "com.sharedmusic.app"
         minSdk = 31
         targetSdk = 36
         versionCode = 1

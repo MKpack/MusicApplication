@@ -865,7 +865,7 @@ private fun QueueNowPlayingHeader(
 
         IconButton(
             enabled = !song.isFavoriteLoading && song.canFavorite,
-            onClick = onFavoriteSong
+            onClick = { onFavoriteSong() }
         ) {
             Icon(
                 painter = painterResource(

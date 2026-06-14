@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Icon
@@ -87,6 +88,14 @@ fun AboutMusicScreen(
 
         item {
             AboutInfoCard(
+                icon = Icons.Default.Shuffle,
+                title = "目前缺陷，后期更新会处理",
+                body = "远程大列表的随机播放目前仍基于已加载队列，不能代表完整曲库随机。后续会改为服务端随机会话分页，客户端按页追加随机队列。"
+            )
+        }
+
+        item {
+            AboutInfoCard(
                 icon = Icons.Default.Storage,
                 title = "数据说明",
                 body = "在线歌曲来自服务端返回的数据；下载歌曲建议保存在 App 专属目录，本地音乐只通过设备 Uri 播放，不会上传到服务器。"
@@ -105,10 +114,10 @@ fun AboutMusicScreen(
             AboutInfoCard(
                 icon = Icons.Default.Email,
                 title = "反馈与建议",
-                body = "support@sharedmusic.app",
+                body = "3198691272@qq.com",
                 onClick = {
                     val intent = Intent(Intent.ACTION_SENDTO).apply {
-                        data = Uri.parse("mailto:support@sharedmusic.app")
+                        data = Uri.parse("mailto:3198691272@qq.com")
                         putExtra(Intent.EXTRA_SUBJECT, "Shared Music 反馈")
                     }
                     runCatching {

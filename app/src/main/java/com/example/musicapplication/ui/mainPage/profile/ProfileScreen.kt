@@ -135,7 +135,9 @@ fun ProfileScreen(
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item {
-                ProfileHeader()
+                ProfileHeader(
+                    onClickSetting = onClickSetting
+                )
             }
 
             item { ProfileSummary(uiState) }
@@ -232,7 +234,9 @@ private fun ProfileRefreshIndicator(
 
 
 @Composable
-private fun ProfileHeader() {
+private fun ProfileHeader(
+    onClickSetting: () -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -263,7 +267,7 @@ private fun ProfileHeader() {
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    onClick = { }
+                    onClick = onClickSetting
                 ),
             contentAlignment = Alignment.Center
         ) {

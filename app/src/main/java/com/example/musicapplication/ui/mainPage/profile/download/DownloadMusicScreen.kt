@@ -289,6 +289,7 @@ private fun DownloadTag() {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PlayAllButton(
     enabled: Boolean,

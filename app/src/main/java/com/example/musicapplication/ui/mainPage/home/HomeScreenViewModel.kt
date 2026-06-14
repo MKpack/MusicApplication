@@ -4,7 +4,9 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.musicapplication.data.common.RepositoryWorkResult
+import com.example.musicapplication.data.repository.AppNotificationRepository
 import com.example.musicapplication.data.repository.SongRepository
+import com.example.musicapplication.domain.model.AppNotification
 import com.example.musicapplication.domain.model.Song
 import com.example.musicapplication.domain.model.SongListKey
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,10 +23,17 @@ data class SongListUiState(
     val isEndReached: Boolean = false
 )
 
+data class HomeNotificationUiState(
+    val notification: AppNotification? = null,
+    val showNotificationDialog: Boolean = false,
+    val notificationMsg: String? = null
+)
+
 
 @HiltViewModel
 class HomeScreenViewModel @Inject constructor(
-    private val songRepository: SongRepository
+    private val songRepository: SongRepository,
+    private val appNotificationRepository: AppNotificationRepository
 ): ViewModel() {
 
 
@@ -33,9 +42,73 @@ class HomeScreenViewModel @Inject constructor(
     private val _songListUiState = MutableStateFlow(SongListUiState())
     val songListUiState = _songListUiState.asStateFlow()
 
+    private val _notificationUiState = MutableStateFlow(HomeNotificationUiState())
+    val notificationUiState = _notificationUiState.asStateFlow()
+
     init {
         observeHotSongs()
         refreshHotSongs()
+        checkLatestNotificationOnAppOpen()
+    }
+
+    private fun checkLatestNotificationOnAppOpen() {
+        viewModelScope.launch {
+            when (val result = appNotificationRepository.getLatestNotification()) {
+                is RepositoryWorkResult.Success -> {
+                    val notification = result.data ?: return@launch
+                    val lastShownId = appNotificationRepository.getLastAutoShownNotificationId()
+                    if (notification.notificationId != lastShownId) {
+                        _notificationUiState.value = _notificationUiState.value.copy(
+                            notification = notification,
+                            showNotificationDialog = true
+                        )
+                        appNotificationRepository.saveLastAutoShownNotificationId(notification.notificationId)
+                    }
+                }
+
+                is RepositoryWorkResult.Failure -> {
+                    // 自动检查通知失败时保持静默，避免每次打开 App 都打扰用户。
+                }
+            }
+        }
+    }
+
+    fun loadLatestNotificationByClick() {
+        viewModelScope.launch {
+            when (val result = appNotificationRepository.getLatestNotification()) {
+                is RepositoryWorkResult.Success -> {
+                    val notification = result.data
+                    if (notification == null) {
+                        _notificationUiState.value = _notificationUiState.value.copy(
+                            notificationMsg = "暂无通知"
+                        )
+                    } else {
+                        _notificationUiState.value = _notificationUiState.value.copy(
+                            notification = notification,
+                            showNotificationDialog = true
+                        )
+                    }
+                }
+
+                is RepositoryWorkResult.Failure -> {
+                    _notificationUiState.value = _notificationUiState.value.copy(
+                        notificationMsg = result.message
+                    )
+                }
+            }
+        }
+    }
+
+    fun dismissNotificationDialog() {
+        _notificationUiState.value = _notificationUiState.value.copy(
+            showNotificationDialog = false
+        )
+    }
+
+    fun consumeNotificationMsg() {
+        _notificationUiState.value = _notificationUiState.value.copy(
+            notificationMsg = null
+        )
     }
 
     private fun observeHotSongs() {

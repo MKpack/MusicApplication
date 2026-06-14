@@ -416,7 +416,7 @@ class PlayerViewModel @Inject constructor(
         return listOf(currentSong) + rest
     }
 
-    // 随机排序
+    // 随机排序 TODO 现在的随机只是通过现有队列随机，后期可以扩展
     private fun enableShuffleMode() {
         // 优先基于原始队列打乱；如果没有原始队列，就用当前队列。
         val baseQueue = _originalQueue.value.ifEmpty {

@@ -29,4 +29,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindUserStatRepository(impl: UserStatRepositoryImpl): UserStatRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAppNotificationRepository(
+        impl: AppNotificationRepositoryImpl
+    ): AppNotificationRepository
 }
