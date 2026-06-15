@@ -3,6 +3,7 @@ package com.example.musicapplication.ui.mainPage.audioPlayer
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -27,6 +28,8 @@ import com.example.musicapplication.data.common.RepositoryWorkResult
 import com.example.musicapplication.data.local.artwork.ArtworkCacheManager
 import com.example.musicapplication.data.local.player.PlayerSnapshot
 import com.example.musicapplication.data.local.player.PlayerStateStore
+import com.example.musicapplication.data.local.player.toPlayerSnapshotSong
+import com.example.musicapplication.data.local.player.toSong
 import com.example.musicapplication.data.repository.SongRepository
 import com.example.musicapplication.data.repository.UserStatRepository
 import com.example.musicapplication.utils.LrcParser
@@ -177,9 +180,24 @@ class PlayerViewModel @Inject constructor(
     // 暴露给UI层进行调用
     fun updateColorsFromSongCover() {
         viewModelScope.launch {
-            val bitmap = loadColorBitmap() ?: BitmapFactory.decodeResource(context.resources, R.drawable.default_cover)
+            val bitmap = loadColorBitmap() ?: defaultCoverBitmap()
             updateColorsFromBitmap(bitmap)
         }
+    }
+
+    private fun defaultCoverBitmap(): Bitmap {
+        BitmapFactory.decodeResource(context.resources, R.drawable.default_cover)?.let {
+            return it
+        }
+
+        val drawable = context.getDrawable(R.drawable.default_cover)
+        val width = drawable?.intrinsicWidth?.takeIf { it > 0 } ?: 512
+        val height = drawable?.intrinsicHeight?.takeIf { it > 0 } ?: 512
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        drawable?.setBounds(0, 0, canvas.width, canvas.height)
+        drawable?.draw(canvas)
+        return bitmap
     }
 
     fun changePlayMode(playMode: PlayMode) {
@@ -815,7 +833,11 @@ class PlayerViewModel @Inject constructor(
     private fun restoreLastPlayerState() {
         viewModelScope.launch {
             val snapshot = playerStateStore.snapshotFlow.first() ?: return@launch
-            val songs = songRepository.observeSongsByIds(snapshot.songIds).first()
+            val songs = if (snapshot.songs.isNotEmpty()) {
+                snapshot.songs.map { it.toSong() }
+            } else {
+                songRepository.observeSongsByIds(snapshot.songIds).first()
+            }
             if (songs.isEmpty()) return@launch
 
             val safeIndex = snapshot.currentIndex.coerceIn(songs.indices)
@@ -865,6 +887,7 @@ class PlayerViewModel @Inject constructor(
         viewModelScope.launch {
             playerStateStore.saveSnapshot(
                 PlayerSnapshot(
+                    songs = songs.map { it.toPlayerSnapshotSong() },
                     songIds = songs.map { it.songId },
                     currentIndex = currentIndex,
                     positionMs = currentPosition.value * 1000L,
