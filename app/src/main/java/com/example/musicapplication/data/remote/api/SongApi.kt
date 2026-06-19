@@ -12,37 +12,37 @@ import retrofit2.http.Query
 
 interface SongApi {
 
-    @GET("/songs/getHotSongs")
+    @GET("songs/getHotSongs")
     suspend fun getHotSongs(
         @Query("pageNum") pageNum: Long,
         @Query("pageSize") pageSize: Long
     ) : ApiResponse<PageResponse<SongResponse>>
 
-    @GET("/songs/favorites")
+    @GET("songs/favorites")
     suspend fun getLovedSongs(
         @Query("pageNum") pageNum: Long,
         @Query("pageSize") pageSize: Long
     ) : ApiResponse<PageResponse<SongResponse>>
 
-    @GET("/songs/search")
+    @GET("songs/search")
     suspend fun searchSongs(
         @Query("keyword") keyword: String,
         @Query("pageNum") pageNum: Long,
         @Query("pageSize") pageSize: Long
     ) : ApiResponse<PageResponse<SongResponse>>
 
-    @POST("/songs/{songId}/favorite")
+    @POST("songs/{songId}/favorite")
     suspend fun favoriteSong(
         @Path("songId") songId: Long
     ) : ApiResponse<SongResponse>
 
-    @DELETE("/songs/{songId}/favorite")
+    @DELETE("songs/{songId}/favorite")
     suspend fun unFavoriteSong(
         @Path("songId") songId: Long
     ) : ApiResponse<SongResponse>
 
 
-    @POST("/songs/{songId}/play")
+    @POST("songs/{songId}/play")
     suspend fun increaseSongPlayCount(
         @Path("songId") songId: Long
     ) : ApiResponse<Any>

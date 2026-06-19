@@ -14,7 +14,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 data class ProfileAccountUiState(
-    val userId: Int? = null,
+    val userId: Long? = null,
     val email: String = "",
     val nickName: String = "",
     val avatarUrl: String? = null,

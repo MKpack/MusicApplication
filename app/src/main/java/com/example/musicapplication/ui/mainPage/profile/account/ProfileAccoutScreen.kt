@@ -367,7 +367,7 @@ private fun NickNameField(
 
 @Composable
 private fun ReadOnlyProfileCard(
-    userId: Int?,
+    userId: Long?,
     email: String
 ) {
     Column(

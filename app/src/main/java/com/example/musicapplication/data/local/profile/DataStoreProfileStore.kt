@@ -21,14 +21,19 @@ class DataStoreProfileStore @Inject constructor(
 ) : ProfileStore {
 
     private object Keys {
-        val USER_ID = intPreferencesKey("user_id")
+        // 新KEY：Long类型
+        val USER_ID = longPreferencesKey("user_id_long")
+        // 旧KEY：以前保存过 Int 类型
+        val LEGACY_USER_ID = intPreferencesKey("user_id")
         val EMAIL = stringPreferencesKey("email")
         val NICK_NAME = stringPreferencesKey("nick_name")
         val AVATAR_URL = stringPreferencesKey("avatar_url")
     }
 
     override val profileFlow = context.profileDataStore.data.map { prefs ->
-        val userId = prefs[Keys.USER_ID] ?: return@map null
+        val userId: Long = prefs[Keys.USER_ID]
+            ?: prefs[Keys.LEGACY_USER_ID]?.toLong()
+            ?: return@map null
 
         UserProfile(
             userId = userId,
@@ -40,6 +45,8 @@ class DataStoreProfileStore @Inject constructor(
 
     override suspend fun saveProfile(profile: UserProfile) {
         context.profileDataStore.edit { prefs ->
+            // 删除旧类型Int
+            prefs.remove(Keys.LEGACY_USER_ID)
             prefs[Keys.USER_ID] = profile.userId
             prefs[Keys.EMAIL] = profile.email
             prefs[Keys.NICK_NAME] = profile.nickName.orEmpty()

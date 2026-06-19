@@ -43,6 +43,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.musicapplication.ui.theme.LocalMusicThemeColors
+import com.example.musicapplication.R
+import androidx.core.net.toUri
 
 @Composable
 fun AboutMusicScreen(
@@ -83,6 +85,20 @@ fun AboutMusicScreen(
                 icon = Icons.Default.LibraryMusic,
                 title = "音乐能力",
                 body = "支持在线歌曲、本地音乐、喜欢列表、最近播放和分页播放队列。播放界面会跟随当前主题色保持一致。"
+            )
+        }
+
+        item {
+            AboutInfoCard(
+                icon = Icons.Default.Shuffle,
+                title = "官方网站地址",
+                body = "106.12.119.143",
+                onClick = {
+                    val intent = Intent(Intent.ACTION_VIEW, "http://106.12.119.143".toUri())
+                    runCatching {
+                        context.startActivity(intent)
+                    }
+                }
             )
         }
 
@@ -202,7 +218,7 @@ private fun AppIdentityCard() {
         Spacer(modifier = Modifier.height(5.dp))
 
         Text(
-            text = "版本 1.0",
+            text = R.string.version.toString(),
             color = LocalMusicThemeColors.current.textSecondary,
             fontSize = 13.sp
         )

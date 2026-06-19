@@ -7,12 +7,12 @@ import retrofit2.http.POST
 
 interface UserStatApi {
 
-    @GET("/userStat/get")
+    @GET("userStat/get")
     suspend fun getUserStat() : ApiResponse<UserStatResponse>
 
-    @POST("/userStat/increase")
+    @POST("userStat/increase")
     suspend fun increasePlayStat() : ApiResponse<UserStatResponse>
 
-//    @POST("/userStat/decrease")
+//    @POST("userStat/decrease")
 //    suspend fun decreasePlayStat() : ApiResponse<UserStatResponse>
 }

@@ -5,6 +5,6 @@ import retrofit2.Response
 import retrofit2.http.GET
 
 interface MainPageApi {
-    @GET("/demo")
+    @GET("demo")
     public suspend fun test(): Response<ApiResponse<String>>
 }

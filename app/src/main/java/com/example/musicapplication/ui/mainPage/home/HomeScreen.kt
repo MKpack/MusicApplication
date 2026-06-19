@@ -204,8 +204,9 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(22.dp))
             }
 
+            // TODO 更多 先注释为""等到时候真有在写
             item {
-                SectionHeader(title = "热门歌曲", action = "更多")
+                SectionHeader(title = "热门歌曲", action = "")
             }
 
             item {

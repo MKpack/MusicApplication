@@ -26,8 +26,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -57,6 +59,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -298,6 +301,22 @@ private fun AppleMusicPlayerMorph(
         panelTransition
     }
 
+    // 封面和歌曲信息占上方 70%；播放控制区占下方 30%。
+    val artworkRegionHeight = screenHeight * 0.7f
+
+    // Artwork 模式下，封面尺寸同时受屏幕宽度和上方区域高度约束。
+    val artCoverImageSize = minOf(
+        300.dp,
+        screenWidth - 16.dp,
+//        artworkRegionHeight - 32.dp
+    )
+    // Lyrics / Queue 模式下的紧凑封面尺寸。
+    val lyricCoverImageSize = 64.dp
+
+    // Artwork 模式下，封面分别在屏幕宽度和上方 70% 区域内居中。
+    val artWorkHPadding = (screenWidth - artCoverImageSize) / 2
+    val artWorkVPadding = (screenHeight * 0.6f - artCoverImageSize) / 3 * 2
+
     Box(modifier = modifier) {
         Box(
             modifier = Modifier
@@ -386,20 +405,20 @@ private fun AppleMusicPlayerMorph(
                     modifier = Modifier
                         .offset(
                             x = lerpDp(
-                                lerpDp(12.dp, 42.dp, p),
+                                lerpDp(12.dp, artWorkHPadding, p),
                                 lerpDp(12.dp, 32.dp, p),
                                 compactArtworkProgress
                             ),
                             y = lerpDp(
-                                lerpDp(10.dp, 145.dp, p),
+                                lerpDp(10.dp, artWorkVPadding, p),
                                 lerpDp(10.dp, 62.dp, p),
                                 compactArtworkProgress
                             )
                         )
                         .size(
                             lerpDp(
-                                lerpDp(50.dp, 300.dp, p),
-                                lerpDp(50.dp, 64.dp, p),
+                                lerpDp(50.dp, artCoverImageSize, p),
+                                lerpDp(50.dp, lyricCoverImageSize, p),
                                 compactArtworkProgress
                             )
                         )
@@ -541,10 +560,11 @@ private fun FullContent(
             .padding(horizontal = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // 上方 70%：封面与歌曲信息， Lyrics / Queue 对应面板。
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(600.dp)
+                .weight(7f)
         ) {
             if (panelTextAlpha < 0.99f) {
                 ArtworkTopContent(
@@ -600,6 +620,7 @@ private fun FullContent(
             }
         }
 
+        // 下方 30%：进度条、播放控制和面板切换。
         PlaybackFooter(
             isPlaying = isPlaying,
             onPlayPauseClick = onPlayPauseClick,
@@ -607,7 +628,11 @@ private fun FullContent(
             onNextClick = { playerViewModel.playNext() },
             selectedPanel = selectedPanel,
             onPanelChange = onPanelChange,
-            playerViewModel = playerViewModel
+            playerViewModel = playerViewModel,
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(3f)
+                .navigationBarsPadding()
         )
     }
 }
@@ -707,7 +732,9 @@ private fun PanelTopContent(
                 LyricsPanel(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(355.dp),
+//                        .height(355.dp),
+                        .weight(1f)
+                        .padding(bottom = 42.dp),
                     lyricsUiState = lyricsUiState,
                     currentPosition = currentPosition
                 )
@@ -735,7 +762,9 @@ private fun PanelTopContent(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(340.dp)
+//                        .height(340.dp)
+                        .weight(1f)
+                        .padding(bottom = 42.dp)
                 )
             }
 
@@ -753,7 +782,8 @@ private fun PlaybackFooter(
     onNextClick: () -> Unit,
     selectedPanel: PlayerFullPanel,
     onPanelChange: (PlayerFullPanel) -> Unit,
-    playerViewModel: PlayerViewModel
+    playerViewModel: PlayerViewModel,
+    modifier: Modifier = Modifier
 ) {
     val queue by playerViewModel.songQueue.collectAsState()
     val currentIndex by playerViewModel.currentIndex.collectAsState()
@@ -772,62 +802,63 @@ private fun PlaybackFooter(
         PlayMode.RepeatOne -> true
     }
 
-    PlayerProgressBar(playerViewModel)
-
-    Spacer(modifier = Modifier.height(46.dp))
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceEvenly,
-        verticalAlignment = Alignment.CenterVertically
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.SpaceBetween
     ) {
-        IconButton(
-            onClick = onPreviousClick,
-            enabled = canPlayPrevious,
-            modifier = Modifier.size(86.dp)
+        PlayerProgressBar(playerViewModel)
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                painter = painterResource(R.drawable.backward_solid_full),
-                contentDescription = null,
-                tint = Color.White.copy(alpha = if (canPlayPrevious) 1f else 0.28f),
-                modifier = Modifier.size(52.dp)
-            )
+            IconButton(
+                onClick = onPreviousClick,
+                enabled = canPlayPrevious,
+                modifier = Modifier.size(86.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.backward_solid_full),
+                    contentDescription = null,
+                    tint = Color.White.copy(alpha = if (canPlayPrevious) 1f else 0.28f),
+                    modifier = Modifier.size(52.dp)
+                )
+            }
+
+            IconButton(
+                onClick = onPlayPauseClick,
+                modifier = Modifier.size(86.dp)
+            ) {
+                Icon(
+                    painter = painterResource(
+                        if (isPlaying) R.drawable.pause_icon else R.drawable.play_icon
+                    ),
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(68.dp)
+                )
+            }
+
+            IconButton(
+                onClick = onNextClick,
+                enabled = canPlayNext,
+                modifier = Modifier.size(86.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.forward_solid_full),
+                    contentDescription = null,
+                    tint = Color.White.copy(alpha = if (canPlayNext) 1f else 0.28f),
+                    modifier = Modifier.size(52.dp)
+                )
+            }
         }
 
-        IconButton(
-            onClick = onPlayPauseClick,
-            modifier = Modifier.size(86.dp)
-        ) {
-            Icon(
-                painter = painterResource(
-                    if (isPlaying) R.drawable.pause_icon else R.drawable.play_icon
-                ),
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(68.dp)
-            )
-        }
-
-        IconButton(
-            onClick = onNextClick,
-            enabled = canPlayNext,
-            modifier = Modifier.size(86.dp)
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.forward_solid_full),
-                contentDescription = null,
-                tint = Color.White.copy(alpha = if (canPlayNext) 1f else 0.28f),
-                modifier = Modifier.size(52.dp)
-            )
-        }
+        PlayerPanelSwitcher(
+            selectedPanel = selectedPanel,
+            onPanelChange = onPanelChange
+        )
     }
-
-    Spacer(modifier = Modifier.height(24.dp))
-
-    PlayerPanelSwitcher(
-        selectedPanel = selectedPanel,
-        onPanelChange = onPanelChange
-    )
 }
 
 @Composable

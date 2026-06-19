@@ -8,10 +8,10 @@ import retrofit2.http.POST
 
 interface TokenApi {
     //自动刷新accessToken
-    @POST("/refreshToken")
+    @POST("refreshToken")
     public fun getRefreshedAccessToken(@Body refreshToken: RefreshTokenRequest?): Call<ApiResponse<String>>
 
     //测试accessToken的刷新
-    @POST("/refreshToken")
+    @POST("refreshToken")
     public suspend fun getRefreshed(@Body refreshToken: RefreshTokenRequest?): ApiResponse<String>
 }

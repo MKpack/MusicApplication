@@ -3,6 +3,8 @@ package com.example.musicapplication.playback
 import android.util.Log
 import androidx.media3.common.Player
 import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
@@ -57,6 +59,14 @@ class PlaybackService : MediaSessionService() {
             )
             .build()
             .apply {
+                // 可以被打断和打断
+                val audioAttributes = AudioAttributes.Builder()
+                    .setUsage(C.USAGE_MEDIA)
+                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+                    .build()
+                setAudioAttributes(audioAttributes, true)
+
+                // 设置监听器回掉
                 addListener(object : Player.Listener {
                     override fun onIsPlayingChanged(isPlaying: Boolean) {
                         Log.d(TAG, "onIsPlayingChanged: $isPlaying")

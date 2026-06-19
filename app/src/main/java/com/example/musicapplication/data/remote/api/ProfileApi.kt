@@ -16,10 +16,10 @@ interface ProfileApi {
     @GET("userProfile")
     suspend fun getUserProfile(): ApiResponse<ProfileResponse>
 
-    @PUT("/user/profile")
+    @PUT("user/profile")
     suspend fun updateUserProfile(@Body profileRequest: ProfileRequest): ApiResponse<ProfileResponse>
 
     @Multipart
-    @POST("/user/avatar")
+    @POST("user/avatar")
     suspend fun updateUserAvatar(@Part avatar: MultipartBody.Part): ApiResponse<ProfileResponse>
 }

@@ -15,7 +15,7 @@ import javax.inject.Inject
 data class ProfileUIState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
-    val userId: Int? = null,
+    val userId: Long? = null,
     val email: String = "music@example.com",
     val nickName: String = "未知用户",
     val avatarUrl: String? = null,

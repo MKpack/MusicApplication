@@ -6,6 +6,6 @@ import retrofit2.http.GET
 
 interface AppNotificationApi {
 
-    @GET("/notification/latest")
+    @GET("notification/latest")
     suspend fun getLatestNotification(): ApiResponse<AppNotificationResponse?>
 }

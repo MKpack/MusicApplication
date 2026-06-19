@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">Shared Music</string>
     <string name="home">发现</string>
-    <string name="profile">音乐库</string>
+    <string name="profile">我的</string>
     <string name="playback_notification_channel_name">音乐播放</string>
+    <string name="version">版本1.0.1</string>
 </resources>
