@@ -4,6 +4,7 @@ data class AppNotificationResponse(
     val notificationId: Long,
     val title: String?,
     val content: String?,
+    val imageUrl: String?,
     val status: Int?,
     val startTime: String?,
     val endTime: String?,

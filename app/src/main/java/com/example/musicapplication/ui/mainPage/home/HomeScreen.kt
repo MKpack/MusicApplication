@@ -1,6 +1,8 @@
 package com.example.musicapplication.ui.mainPage.home
 
 import android.content.Context
+import android.graphics.drawable.PaintDrawable
+import android.widget.Space
 import android.widget.Toast
 import com.example.musicapplication.R
 import androidx.compose.foundation.Image
@@ -58,13 +60,18 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
+import com.example.musicapplication.BuildConfig
 import com.example.musicapplication.domain.model.AppNotification
 import com.example.musicapplication.domain.model.Song
 import com.example.musicapplication.domain.model.SongListKey
@@ -404,11 +411,53 @@ private fun AppNotificationDialog(
         text = {
             Column {
                 Text(
-                    text = notification.content.ifBlank { "暂无通知内容" },
+                    text = buildAnnotatedString {
+                        append(
+                            notification.content.ifBlank {
+                                "暂无通知内容"
+                            }
+                        )
+
+                        append("，")
+
+                        withLink(
+                            LinkAnnotation.Url(
+                                "http://106.12.119.143/downloads/shared-music-android.apk"
+                            )
+                        ) {
+                            pushStyle(
+                                SpanStyle(
+                                    color = LocalMusicThemeColors.current.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            )
+
+                            append("下载地址")
+
+                            pop()
+                        }
+                    },
                     color = LocalMusicThemeColors.current.textSecondary,
                     fontSize = 14.sp,
                     lineHeight = 20.sp
                 )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                val imageUrl = notification.imageUrl
+                if (imageUrl != null) {
+                    Image(
+                        painter = rememberAsyncImagePainter(
+                            model = imageUrl,
+                        placeholder = painterResource(R.drawable.default_cover),
+                        error = painterResource(R.drawable.default_cover)
+                        ),
+                        contentDescription = "显示图片",
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .size(160.dp)
+                    )
+                }
 
                 notification.createdAt?.takeIf { it.isNotBlank() }?.let { createdAt ->
                     Spacer(modifier = Modifier.height(12.dp))

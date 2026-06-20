@@ -26,7 +26,7 @@ data class SongListUiState(
 data class HomeNotificationUiState(
     val notification: AppNotification? = null,
     val showNotificationDialog: Boolean = false,
-    val notificationMsg: String? = null
+    val notificationMsg: String? = null,
 )
 
 
