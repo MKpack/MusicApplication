@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,7 +55,7 @@ fun LoginEntry(
 //    val navController = rememberNavController()
 //    var mode by remember { mutableStateOf(LoginMode.ACCOUNT) }
     val mode by loginViewModel.mode.collectAsState()
-    val loginStatus by loginViewModel.loginStatus.collectAsState()
+    val loginSuccess by loginViewModel.loginSuccess.collectAsState()
     BackHandler(enabled = mode != LoginMode.ACCOUNT) {
         loginViewModel.changeMode(LoginMode.ACCOUNT)
     }
@@ -67,8 +68,8 @@ fun LoginEntry(
         loginViewModel.consumeMessage()
     }
     //副作用
-    LaunchedEffect(loginStatus) {
-        if (loginStatus == "success") {
+    LaunchedEffect(loginSuccess) {
+        if (loginSuccess) {
             if (!RouterConfig.MAINPAGE.isEmpty()) {
                 //bug 已经登陆成功返回还是可以到登陆页
                 navController.navigate(RouterConfig.MAINPAGE) {
@@ -77,7 +78,7 @@ fun LoginEntry(
                 }
             }
             Toast.makeText(context, "登陆成功", Toast.LENGTH_SHORT).show()
-            loginViewModel.changeLoginStatus()
+            loginViewModel.consumeLoginSuccess()
         }
     }
 
@@ -198,7 +199,8 @@ fun AccountForm(loginViewModel: LoginViewModel) {
 
     val email by loginViewModel.email.collectAsState()
     val pwd by loginViewModel.password.collectAsState()
-    val loginStatus by loginViewModel.loginStatus.collectAsState()
+    val loginError by loginViewModel.loginError.collectAsState()
+    val isSubmitting by loginViewModel.isSubmitting.collectAsState()
     Column {
         NewTextField(
             text = email,
@@ -212,33 +214,21 @@ fun AccountForm(loginViewModel: LoginViewModel) {
             hint = "密码"
         )
         Spacer(modifier = Modifier.height(3.dp))
-        if (loginStatus == "fail") {
+        loginError?.let { error ->
             Text(
-                "  用户名或密码错误",
+                "  $error",
                 fontSize = 10.sp,
                 color = Color.Red
             )
         }
 
         Spacer(modifier = Modifier.height(10.dp))
-        Button(
-            onClick = { loginViewModel.login() },
+        SubmitButton(
+            text = "登录",
             enabled = loginViewModel.ifCanLogin(),
-            modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .height(45.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = LocalMusicThemeColors.current.primary,
-                contentColor = Color.White,
-                disabledContainerColor = LocalMusicThemeColors.current.disabledContainer,
-                disabledContentColor = LocalMusicThemeColors.current.disabledContent
-            ),
-            shape = RoundedCornerShape(14.dp)
-        ) {
-            Text(
-                "登录",
-            )
-        }
+            isLoading = isSubmitting,
+            onClick = { loginViewModel.login() }
+        )
         Spacer(modifier = Modifier.height(10.dp))
         Row(
             modifier = Modifier.fillMaxWidth(0.8f),
@@ -265,15 +255,12 @@ fun RegisterForm(loginViewModel: LoginViewModel, context: Context) {
     val pwd by loginViewModel.password.collectAsState()
     val pwdAgain by loginViewModel.passwordAgain.collectAsState()
     val authCode by loginViewModel.authCode.collectAsState()
-    val registerStatus by loginViewModel.registerStatus.collectAsState()
+    val isSubmitting by loginViewModel.isSubmitting.collectAsState()
     Column {
         NewTextField(email, { loginViewModel.emailUpdate(it) }, hint = "邮箱")
         Spacer(modifier = Modifier.height(10.dp))
         ButtonRightTextField(authCode, { loginViewModel.authCodeUpdate(it) },  "验证码",
-            onClick = {
-                loginViewModel.sendCode()
-                Toast.makeText(context, "发送验证码成功", Toast.LENGTH_SHORT).show()
-            },
+            onClick = { loginViewModel.sendCode() },
             isOk = loginViewModel.isEmailValid(email) && email != ""
         )
         if (!loginViewModel.isEmailValid(email) && email != "") {
@@ -295,30 +282,13 @@ fun RegisterForm(loginViewModel: LoginViewModel, context: Context) {
                 color = Color.Red
             )
         }
-        if (registerStatus == "fail") {
-            Text(
-                "验证码过期或错误",
-                fontSize = 10.sp,
-                color = Color.Red
-            )
-        }
         Spacer(modifier = Modifier.height(10.dp))
-        Button(
-            onClick = { loginViewModel.register() },
+        SubmitButton(
+            text = "注册",
             enabled = loginViewModel.ifCanRegister(),
-            modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .height(45.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = LocalMusicThemeColors.current.primary,
-                contentColor = Color.White,
-                disabledContainerColor = LocalMusicThemeColors.current.disabledContainer,
-                disabledContentColor = LocalMusicThemeColors.current.disabledContent
-            ),
-            shape = RoundedCornerShape(14.dp)
-        ) {
-            Text("注册")
-        }
+            isLoading = isSubmitting,
+            onClick = { loginViewModel.register() }
+        )
         Spacer(modifier = Modifier.height(10.dp))
         Row(
             modifier = Modifier.fillMaxWidth(0.8f),
@@ -338,6 +308,7 @@ fun ForgetForm(loginViewModel: LoginViewModel, context: Context) {
     val email by loginViewModel.email.collectAsState()
     val authCode by loginViewModel.authCode.collectAsState()
     val pwd by loginViewModel.password.collectAsState()
+    val isSubmitting by loginViewModel.isSubmitting.collectAsState()
     Column {
         NewTextField(email, { loginViewModel.emailUpdate(it) }, hint = "邮箱")
         Spacer(modifier = Modifier.height(10.dp))
@@ -348,22 +319,12 @@ fun ForgetForm(loginViewModel: LoginViewModel, context: Context) {
         Spacer(modifier = Modifier.height(10.dp))
         PasswordTextField(pwd, { loginViewModel.passwordUpdate(it) }, "设置新密码")
         Spacer(modifier = Modifier.height(10.dp))
-        Button(
-            onClick = { loginViewModel.reset() },
+        SubmitButton(
+            text = "重置密码",
             enabled = loginViewModel.ifCanReset(),
-            modifier = Modifier
-                .fillMaxWidth(0.8f)
-                .height(45.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = LocalMusicThemeColors.current.primary,
-                contentColor = Color.White,
-                disabledContainerColor = LocalMusicThemeColors.current.disabledContainer,
-                disabledContentColor = LocalMusicThemeColors.current.disabledContent
-            ),
-            shape = RoundedCornerShape(14.dp)
-        ) {
-            Text("重置密码")
-        }
+            isLoading = isSubmitting,
+            onClick = { loginViewModel.reset() }
+        )
         Spacer(modifier = Modifier.height(10.dp))
         Row(
             modifier = Modifier.fillMaxWidth(0.8f),
@@ -373,6 +334,49 @@ fun ForgetForm(loginViewModel: LoginViewModel, context: Context) {
             NoRippleTextButton("想起密码了，去登录", ) {
                 loginViewModel.changeMode(LoginMode.ACCOUNT)
             }
+        }
+    }
+}
+
+//登录、注册、重置密码共用的提交按钮：请求中显示转圈，且不能点击
+@Composable
+private fun SubmitButton(
+    text: String,
+    enabled: Boolean,
+    isLoading: Boolean,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled && !isLoading,
+        modifier = Modifier
+            .fillMaxWidth(0.8f)
+            .height(45.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = LocalMusicThemeColors.current.primary,
+            contentColor = Color.White,
+            // 请求中虽然不可点击，但保持主题色，看起来是"处理中"而不是"不可用"
+            disabledContainerColor = if (isLoading) {
+                LocalMusicThemeColors.current.primary
+            } else {
+                LocalMusicThemeColors.current.disabledContainer
+            },
+            disabledContentColor = if (isLoading) {
+                Color.White
+            } else {
+                LocalMusicThemeColors.current.disabledContent
+            }
+        ),
+        shape = RoundedCornerShape(14.dp)
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                color = Color.White,
+                strokeWidth = 2.dp
+            )
+        } else {
+            Text(text)
         }
     }
 }

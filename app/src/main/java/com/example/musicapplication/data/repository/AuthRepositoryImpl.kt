@@ -1,13 +1,13 @@
 package com.example.musicapplication.data.repository
 
-import android.content.Context
 import android.util.Log
-import dagger.hilt.android.qualifiers.ApplicationContext
-import jakarta.inject.Inject
-import androidx.core.content.edit
+import com.example.musicapplication.data.common.RepositoryWorkResult
+import com.example.musicapplication.data.common.toRepositoryFailure
 import com.example.musicapplication.data.remote.api.AuthApi
 import com.example.musicapplication.data.remote.dto.request.LoginRequest
+import com.example.musicapplication.data.remote.dto.response.ApiResponse
 import com.example.musicapplication.data.session.SessionManager
+import javax.inject.Inject
 
 
 class AuthRepositoryImpl @Inject constructor(
@@ -16,75 +16,61 @@ class AuthRepositoryImpl @Inject constructor(
 ) : AuthRepository {
     private val TAG = "AuthRepositoryImpl"
 
-    override suspend fun login(username: String, password: String): String {
-        try {
-            val apiResponse = authApi.login(LoginRequest(username, password))
+    override suspend fun login(email: String, password: String): RepositoryWorkResult<Unit> {
+        return try {
+            val response = authApi.login(LoginRequest(email, password))
+            val token = response.data
 
-            if (apiResponse.code == 200) {
-                val token = apiResponse.data
-                if (token != null) {
-                    sessionManager.onLoginSuccess(token.accessToken, token.refreshToken)
-                }
-                return "success"
+            // 拿不到 token 也算失败，否则进入主页后所有请求都会 401
+            if (response.code == 200 && token != null) {
+                sessionManager.onLoginSuccess(token.accessToken, token.refreshToken)
+                RepositoryWorkResult.Success(Unit)
             } else {
-                return apiResponse.message
+                RepositoryWorkResult.Failure(response.message, response.code)
             }
         } catch (e: Exception) {
             Log.e(TAG, "login failed", e)
-            return "网络请求失败"
+            e.toRepositoryFailure("网络请求失败")
         }
     }
 
-    override suspend fun getAuthCode(email: String): String {
-        return try {
-            val response = authApi.sendCode(email)
-            if (response.code == 200) {
-                response.data ?: response.message
-            } else {
-                response.message
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "get auth code failed", e)
-            "网络请求失败"
-        }
+    override suspend fun sendCode(email: String): RepositoryWorkResult<Unit> {
+        return request("send code") { authApi.sendCode(email) }
     }
 
     override suspend fun register(
         email: String,
         authCode: String,
-        password: String,
-        passwordAgain: String
-    ): String {
-        if (password != passwordAgain)
-            return "两次输入密码不同"
-        return try {
-            val response = authApi.register(email, authCode, password)
-            if (response.code == 200) {
-                response.data ?: response.message
-            } else {
-                response.message
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "register failed", e)
-            "网络请求失败"
-        }
+        password: String
+    ): RepositoryWorkResult<Unit> {
+        return request("register") { authApi.register(email, authCode, password) }
     }
 
     override suspend fun resetPassword(
         email: String,
         authCode: String,
         newPassword: String
-    ): String? {
+    ): RepositoryWorkResult<Unit> {
+        return request("reset password") { authApi.resetPassword(email, authCode, newPassword) }
+    }
+
+    /**
+     * 后端成功时 data 是一句提示文字（如"成功注册"），不能拿它判断成功与否，只看 code == 200
+     */
+    private suspend fun request(
+        action: String,
+        call: suspend () -> ApiResponse<*>
+    ): RepositoryWorkResult<Unit> {
         return try {
-            val response = authApi.resetPassword(email, authCode, newPassword)
+            val response = call()
             if (response.code == 200) {
-                response.data ?: response.message
+                RepositoryWorkResult.Success(Unit)
             } else {
-                response.message
+                RepositoryWorkResult.Failure(response.message, response.code)
             }
         } catch (e: Exception) {
-            Log.e(TAG, "reset password failed", e)
-            "网络请求失败"
+            Log.e(TAG, "$action failed", e)
+            e.toRepositoryFailure("网络请求失败")
         }
     }
 }

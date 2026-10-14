@@ -79,7 +79,7 @@ fun MainPage(
 ) {
     val TAG = "MainPage"
     val navController = rememberNavController()
-    val items = listOf( BarItem.Home, BarItem.Profile)
+    val items = listOf(BarItem.Home, BarItem.Profile)
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route

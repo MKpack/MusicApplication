@@ -1,11 +1,11 @@
 package com.example.musicapplication.data.repository
 
+import com.example.musicapplication.data.common.RepositoryWorkResult
+
 
 interface AuthRepository {
-    suspend fun login(username: String, password: String): String
-    suspend fun getAuthCode(email: String): String
-    suspend fun register(email: String, authCode: String, password: String, passwordAgain: String): String
-    suspend fun resetPassword(email: String, authCode: String, newPassword: String): String?
-    //测试accessToken刷新
-//    suspend fun refresh(refreshToken: String): String?
+    suspend fun login(email: String, password: String): RepositoryWorkResult<Unit>
+    suspend fun sendCode(email: String): RepositoryWorkResult<Unit>
+    suspend fun register(email: String, authCode: String, password: String): RepositoryWorkResult<Unit>
+    suspend fun resetPassword(email: String, authCode: String, newPassword: String): RepositoryWorkResult<Unit>
 }
