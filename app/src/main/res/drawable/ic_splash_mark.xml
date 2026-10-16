@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  系统启动页中间的标志：去掉底色的红色耳机爱心。
+  没有图标底色时，系统要求图标画布 288dp，可见区域是中间直径 192dp 的圆；图形约 116dp 宽，居中放在圆内。
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="288dp"
+    android:height="288dp"
+    android:viewportWidth="288"
+    android:viewportHeight="288">
+    <!-- 把图形中心 (54, 56) 放到画布中心 (144, 144)，放大 1.8 倍 -->
+    <group
+        android:scaleX="1.8"
+        android:scaleY="1.8"
+        android:translateX="46.8"
+        android:translateY="43.2">
+        <path
+            android:pathData="M49,36.5C46,30.5 41,28 36.5,28C29,28 24.5,34 24.5,41.5C24.5,56 41,66.5 54,76.5C67,66.5 83.5,56 83.5,41.5C83.5,34 79,28 71.5,28C67,28 62,30.5 59,36.5"
+            android:strokeWidth="5.4"
+            android:strokeLineCap="round">
+            <aapt:attr name="android:strokeColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="24"
+                    android:startY="28"
+                    android:endX="84"
+                    android:endY="84">
+                    <item android:offset="0" android:color="#FFFF5E7E" />
+                    <item android:offset="1" android:color="#FFFF2D55" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path
+            android:pathData="M54,76.5V84"
+            android:strokeColor="#FFFF2D55"
+            android:strokeWidth="5.4"
+            android:strokeLineCap="round" />
+        <path
+            android:fillColor="#FFFF4A6B"
+            android:pathData="M40.9,41.5a6.3,6.3 0,1 0,12.6 0a6.3,6.3 0,1 0,-12.6 0z" />
+        <path
+            android:fillColor="#FFFF4A6B"
+            android:pathData="M54.5,41.5a6.3,6.3 0,1 0,12.6 0a6.3,6.3 0,1 0,-12.6 0z" />
+    </group>
+</vector>

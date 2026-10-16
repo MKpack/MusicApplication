@@ -12,6 +12,18 @@ enum class MusicThemePreset(
     val cardSoft: Color,
     val playerSurface: Color
 ) {
+    // 樱桃红：默认主题。沿用原来「玫瑰」的枚举名 Red，之前选过玫瑰的用户会自动变成樱桃红
+    Red(
+        label = "樱桃红",
+        primary = Color(0xFFFF2D55),
+        accent = Color(0xFFFF6A3D),
+        primarySoft = Color(0xFFFFE3E9),
+        bgTop = Color(0xFFFFFBFC),
+        bgBottom = Color(0xFFFFF1F4),
+        cardSoft = Color(0xFFFFE8EE),
+        playerSurface = Color(0xFFFFF8FA)
+    ),
+
     Green(
         label = "松石绿",
         primary = Color(0xFF14B8A6),
@@ -32,17 +44,6 @@ enum class MusicThemePreset(
         bgBottom = Color(0xFFEFF9FF),
         cardSoft = Color(0xFFE6F6FF),
         playerSurface = Color(0xFFF7FCFF)
-    ),
-
-    Red(
-        label = "玫瑰",
-        primary = Color(0xFFE11D48),
-        accent = Color(0xFFF43F5E),
-        primarySoft = Color(0xFFFFDEE7),
-        bgTop = Color(0xFFFFFBFC),
-        bgBottom = Color(0xFFFFF1F5),
-        cardSoft = Color(0xFFFFE8EE),
-        playerSurface = Color(0xFFFFF8FA)
     ),
 
     Yellow(

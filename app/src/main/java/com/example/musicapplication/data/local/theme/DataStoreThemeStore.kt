@@ -27,11 +27,11 @@ class DataStoreThemeStore @Inject constructor(
             emit(androidx.datastore.preferences.core.emptyPreferences())
         }
         .map { prefs ->
-            val name = prefs[themePresetKey] ?: MusicThemePreset.Green.name
+            val name = prefs[themePresetKey] ?: MusicThemePreset.Red.name
 
             runCatching {
                 MusicThemePreset.valueOf(name)
-            }.getOrDefault(MusicThemePreset.Green)
+            }.getOrDefault(MusicThemePreset.Red)
         }
 
     override suspend fun saveThemePreset(preset: com.example.musicapplication.ui.theme.MusicThemePreset) {

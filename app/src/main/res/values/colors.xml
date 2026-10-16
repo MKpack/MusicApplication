@@ -7,4 +7,7 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- 系统启动页的底色：浅色模式白底，深色模式在 values-night 里换成黑底 -->
+    <color name="splash_background">#FFFFFFFF</color>
 </resources>

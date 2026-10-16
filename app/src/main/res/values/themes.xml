@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.MusicApplication" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.MusicApplication" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- 系统启动页（Android 12+）：替代原来自己画的 SplashScreen，打开 App 只会看到这一页 -->
+        <item name="android:windowSplashScreenBackground">@color/splash_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_splash_mark</item>
+        <!-- 窗口底色和启动页一致，深色模式下切换页面时不会闪白 -->
+        <item name="android:windowBackground">@color/splash_background</item>
+    </style>
 </resources>

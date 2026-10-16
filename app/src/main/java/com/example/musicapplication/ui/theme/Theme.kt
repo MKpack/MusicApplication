@@ -41,11 +41,11 @@ fun MusicApplicationTheme(
     // Dynamic color is available on Android 12+
     // 改成false，原因：Android 12+ 的动态色会根据系统壁纸改颜色，会覆盖你自己的音乐 App 主题，调 UI 时会很乱。
     dynamicColor: Boolean = false,
-    themePreset: MusicThemePreset = MusicThemePreset.Green,
+    themePreset: MusicThemePreset = MusicThemePreset.Red,
     content: @Composable () -> Unit
 ) {
 
-    val musicColors = themePreset.toMusicThemeColors()
+    val musicColors = themePreset.toMusicThemeColors(darkTheme)
 
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {

@@ -7,15 +7,18 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
+import android.view.View
+import android.view.ViewTreeObserver
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.musicapplication.ui.appNaviagtion.AppNavigation
 import com.example.musicapplication.ui.theme.MusicApplicationTheme
@@ -32,9 +35,11 @@ class MainActivity : ComponentActivity() {
 
     private val mContext: Context = this
     private var externalAudioUri by mutableStateOf<Uri?>(null)
+    private val themeViewModel: ThemeViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setUpSplashScreen()
         enableEdgeToEdge()
 
         window.statusBarColor = android.graphics.Color.TRANSPARENT
@@ -50,7 +55,6 @@ class MainActivity : ComponentActivity() {
 
         setContent {
 
-            val themeViewModel: ThemeViewModel = hiltViewModel()
             val themePreset by themeViewModel.themePreset.collectAsStateWithLifecycle()
 
             MusicApplicationTheme(
@@ -65,6 +69,23 @@ class MainActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    /**
+     * 系统启动页（Android 12+，样式在 themes.xml 里）：主题色从 DataStore 读出来之前一直显示，
+     * 避免先用默认主题色画一帧再变色，最多等 1 秒。
+     * 退场用系统默认的淡出：自己接管退场动画时，交接的那一下会先露出一帧页面，再被启动页盖回来，看起来像闪了一下。
+     */
+    private fun setUpSplashScreen() {
+        val content: View = findViewById(android.R.id.content)
+        val start = SystemClock.uptimeMillis()
+        content.viewTreeObserver.addOnPreDrawListener(object : ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw(): Boolean {
+                val ready = themeViewModel.isLoaded.value || SystemClock.uptimeMillis() - start > 1000
+                if (ready) content.viewTreeObserver.removeOnPreDrawListener(this)
+                return ready
+            }
+        })
     }
 
     override fun onNewIntent(intent: Intent) {
