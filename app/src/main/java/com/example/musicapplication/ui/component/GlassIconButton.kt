@@ -14,23 +14,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.dropShadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 
-/** 44dp 的液态玻璃圆按钮，用作返回、关闭。深色模式下玻璃自动变暗 */
+/**
+ * 液态玻璃圆按钮，默认 44dp，用作返回、关闭；底栏的搜索按钮也用它（传入更大的尺寸）。深色模式下玻璃自动变暗。
+ * 背后有内容时传入 [backdrop]，玻璃会透出模糊后的内容。
+ */
 @Composable
 fun GlassIconButton(
     icon: ImageVector,
     contentDescription: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    backdrop: Backdrop? = null,
+    iconSize: Dp = 21.dp,
 ) {
     val neutral = LocalMusicThemeColors.current.neutral
     val interaction = remember { MutableInteractionSource() }
@@ -44,15 +46,11 @@ fun GlassIconButton(
                 scaleX = scale
                 scaleY = scale
             }
-            .dropShadow(
-                shape = CircleShape,
-                shadow = Shadow(
-                    radius = 14.dp,
-                    color = Color.Black.copy(alpha = if (neutral.isDark) 0.5f else 0.12f),
-                    offset = DpOffset(0.dp, 6.dp)
-                )
+            .glassShadow(CircleShape, neutral)
+            .then(
+                if (backdrop != null) Modifier.liquidGlass(CircleShape, neutral.glass, neutral, backdrop)
+                else Modifier.liquidGlass(CircleShape, neutral.glass, neutral)
             )
-            .liquidGlass(CircleShape, neutral.glass, neutral)
             .clip(CircleShape)
             .clickable(
                 interactionSource = interaction,
@@ -66,7 +64,7 @@ fun GlassIconButton(
             imageVector = icon,
             contentDescription = contentDescription,
             tint = neutral.label,
-            modifier = Modifier.size(21.dp)
+            modifier = Modifier.size(iconSize)
         )
     }
 }

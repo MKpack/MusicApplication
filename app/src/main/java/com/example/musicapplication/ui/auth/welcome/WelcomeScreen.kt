@@ -1,8 +1,5 @@
 package com.example.musicapplication.ui.auth.welcome
 
-import android.graphics.ColorMatrix
-import android.graphics.ColorMatrixColorFilter
-import android.graphics.Shader
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -33,8 +30,6 @@ import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RenderEffect
-import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.shadow.Shadow
@@ -54,6 +49,7 @@ import com.example.musicapplication.ui.component.BrandLogo
 import com.example.musicapplication.ui.component.PrimaryCapsuleButton
 import com.example.musicapplication.ui.component.SecondaryCapsuleButton
 import com.example.musicapplication.ui.component.StatusBarIconsEffect
+import com.example.musicapplication.ui.component.glassBackdropEffect
 import com.example.musicapplication.ui.component.liquidGlass
 import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 import com.example.musicapplication.ui.theme.MusicApplicationTheme
@@ -182,17 +178,6 @@ private fun GlassBackdrop(
                 .offset { IntOffset(-panelOffset.x.roundToInt(), -panelOffset.y.roundToInt()) }
         )
     }
-}
-
-// 背景模糊 + 饱和度提高到 1.7 倍，接近 iOS 液态玻璃的通透感（RenderEffect，Android 12+）
-private fun glassBackdropEffect(sigmaPx: Float): RenderEffect {
-    // RenderEffect 的模糊半径和高斯模糊的 sigma 之间要换算一下
-    val radius = (sigmaPx - 0.5f) / 0.57735f
-    val saturation = ColorMatrix().apply { setSaturation(1.7f) }
-    return android.graphics.RenderEffect.createChainEffect(
-        android.graphics.RenderEffect.createColorFilterEffect(ColorMatrixColorFilter(saturation)),
-        android.graphics.RenderEffect.createBlurEffect(radius, radius, Shader.TileMode.CLAMP)
-    ).asComposeRenderEffect()
 }
 
 /** 玻璃面板的底色、顶部光泽和渐变描边 */

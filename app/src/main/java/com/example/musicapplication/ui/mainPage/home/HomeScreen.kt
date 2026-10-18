@@ -76,6 +76,7 @@ import com.example.musicapplication.domain.model.AppNotification
 import com.example.musicapplication.domain.model.Song
 import com.example.musicapplication.domain.model.SongListKey
 import com.example.musicapplication.ui.theme.LocalMusicThemeColors
+import com.example.musicapplication.ui.mainPage.bottombar.LocalMainBottomInset
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -163,7 +164,8 @@ fun HomeScreen(
                 start = 18.dp,
                 end = 18.dp,
                 top = 12.dp,
-                bottom = 150.dp
+                // 内容可以滑到悬浮底栏下面，底部留出底栏和迷你播放器的高度
+                bottom = LocalMainBottomInset.current
             ),
 //            verticalArrangement = Arrangement.spacedBy(22.dp),
             state = listState

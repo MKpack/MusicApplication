@@ -68,6 +68,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.rememberAsyncImagePainter
 import com.example.musicapplication.R
+import com.example.musicapplication.ui.mainPage.bottombar.LocalMainBottomInset
 import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 import com.example.musicapplication.ui.theme.MusicThemePreset
 import com.example.musicapplication.ui.theme.ThemeViewModel
@@ -130,7 +131,8 @@ fun ProfileScreen(
                 start = 18.dp,
                 end = 18.dp,
                 top = 12.dp,
-                bottom = 150.dp
+                // 内容可以滑到悬浮底栏下面，底部留出底栏和迷你播放器的高度
+                bottom = LocalMainBottomInset.current
             ),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {

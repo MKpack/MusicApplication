@@ -53,7 +53,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -61,6 +64,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -70,6 +74,9 @@ import coil.request.ImageRequest
 import com.example.musicapplication.R
 import com.example.musicapplication.domain.model.Song
 import com.example.musicapplication.ui.component.AppleMusicBackground
+import com.example.musicapplication.ui.component.Backdrop
+import com.example.musicapplication.ui.component.liquidGlass
+import com.example.musicapplication.ui.mainPage.bottombar.MiniPlayerAnchor
 import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
@@ -86,7 +93,9 @@ private enum class PlayerFullPanel {
 fun PlayerSheet(
     context: Context,
     playerViewModel: PlayerViewModel,
-    bottomBarPadding: Dp,
+    // 迷你播放器的位置和大小由底栏决定（底栏收起、隐藏时会变），播放器从这里展开到全屏
+    miniAnchor: (screenWidth: Dp, screenHeight: Dp) -> MiniPlayerAnchor,
+    backdrop: Backdrop?,
     collapseRequest: Int,
     onProgressChange: (Float) -> Unit,
     modifier: Modifier = Modifier
@@ -153,17 +162,9 @@ fun PlayerSheet(
     ) {
         val screenWidth = maxWidth
         val screenHeight = maxHeight
-        // 把上述dp转成px
-        val screenHeightPx = with(density) { screenHeight.toPx() }
-        // mini播放器高度
-        val miniHeightPx = with(density) { 70.dp.toPx() }
-        // 底部预留高度
-        val bottomPaddingPx = with(density) { bottomBarPadding.toPx() }
-        // mini播放器与底部栏的间距
-        val bottomGapPx = with(density) { 10.dp.toPx() }
-        // mini拖到full一共要拖动多少px
-        val dragRangePx = (screenHeightPx - miniHeightPx - bottomPaddingPx - bottomGapPx)
-            .coerceAtLeast(1f)
+        val anchor = miniAnchor(screenWidth, screenHeight)
+        // mini拖到full一共要拖动多少px：迷你播放器的上边缘到屏幕顶部
+        val dragRangePx = with(density) { anchor.y.toPx() }.coerceAtLeast(1f)
 
         fun settle(velocity: Float) {
             when {
@@ -190,7 +191,8 @@ fun PlayerSheet(
             progress = p,
             screenWidth = screenWidth,
             screenHeight = screenHeight,
-            bottomBarPadding = bottomBarPadding,
+            anchor = anchor,
+            backdrop = backdrop,
             dominantColor = colors.firstOrNull() ?: Color.DarkGray,
             secondaryColor = colors.getOrNull(1) ?: Color.Black,
             onClick = { expand() },
@@ -223,7 +225,8 @@ private fun AppleMusicPlayerMorph(
     progress: Float,
     screenWidth: Dp,
     screenHeight: Dp,
-    bottomBarPadding: Dp,
+    anchor: MiniPlayerAnchor,
+    backdrop: Backdrop?,
     dominantColor: Color,
     secondaryColor: Color,
     onClick: () -> Unit,
@@ -234,36 +237,21 @@ private fun AppleMusicPlayerMorph(
 ) {
     val p = progress.coerceIn(0f, 1f)
 
-    val miniHorizontalPadding = 18.dp
-    val miniHeight = 70.dp
-    val miniBottom = bottomBarPadding + 10.dp
+    val miniHeight = anchor.height
+    // 迷你播放器里的封面：36dp，上下左右留一样的边距
+    val miniCoverSize = 36.dp
+    val miniCoverInset = (miniHeight - miniCoverSize) / 2
 
-    // 上方圆角, 18.dp -> 0.dp
+    // 圆角：迷你状态是胶囊；展开时先过渡到 18dp，快到全屏时再变成直角
     val cardRadius = when {
-        p < 0.92f -> 18.dp
+        p < 0.92f -> lerpDp(miniHeight / 2, 18.dp, smoothProgress(p, 0f, 0.25f))
         else -> lerpDp(18.dp, 0.dp, smoothProgress(p, 0.92f, 1f))
     }
 
-    val cardWidth = lerpDp(
-        screenWidth - miniHorizontalPadding * 2,
-        screenWidth,
-        p
-    )
-
-    val cardHeight = lerpDp(
-        miniHeight,
-        screenHeight,
-        p
-    )
-    // card x 方向上的坐标
-    val cardX = (screenWidth - cardWidth) / 2
-
-    // y 方向
-    val cardY = lerpDp(
-        screenHeight - miniBottom - miniHeight,
-        0.dp,
-        p
-    )
+    val cardWidth = lerpDp(anchor.width, screenWidth, p)
+    val cardHeight = lerpDp(anchor.height, screenHeight, p)
+    val cardX = lerpDp(anchor.x, 0.dp, p)
+    val cardY = lerpDp(anchor.y, 0.dp, p)
 
     val fullBackgroundAlpha = smoothProgress(p, 0.9f, 0.98f)
     val outsideScrimAlpha = smoothProgress(p, 0.01f, 0.32f) *
@@ -273,6 +261,7 @@ private fun AppleMusicPlayerMorph(
     val fullContentAlpha = smoothProgress(p, 0.35f, 0.9f)
     val miniContentAlpha = (1f - smoothProgress(p, 0.05f, 0.35f)).coerceIn(0f, 1f)
     val clickInteractionSource = remember { MutableInteractionSource() }
+    val neutral = LocalMusicThemeColors.current.neutral
 
     // Image图片模糊解决方法
     val density = LocalDensity.current
@@ -336,26 +325,29 @@ private fun AppleMusicPlayerMorph(
                 .background(Color.Black.copy(alpha = 0.45f * outsideScrimAlpha))
         )
 
+        val cardShape = RoundedCornerShape(cardRadius)
         val cardModifier = Modifier
             .offset(x = cardX, y = cardY)
             .width(cardWidth)
             .height(cardHeight)
             .then(dragModifier)
             .then(
-                if (p < 0.97f) {
-                    Modifier.clip(RoundedCornerShape(cardRadius))
+                if (whiteSurfaceAlpha > 0.01f) {
+                    Modifier.dropShadow(
+                        shape = cardShape,
+                        shadow = Shadow(
+                            radius = 14.dp,
+                            color = Color.Black.copy(alpha = (if (neutral.isDark) 0.5f else 0.12f) * whiteSurfaceAlpha),
+                            offset = DpOffset(0.dp, 6.dp)
+                        )
+                    )
                 } else {
                     Modifier
                 }
             )
-            .background(Color.Transparent)
             .then(
-                if (p < 0.12f) {
-                    Modifier.border(
-                        width = 1.dp,
-                        color = LocalMusicThemeColors.current.border,
-                        shape = RoundedCornerShape(cardRadius)
-                    )
+                if (p < 0.97f) {
+                    Modifier.clip(cardShape)
                 } else {
                     Modifier
                 }
@@ -382,13 +374,18 @@ private fun AppleMusicPlayerMorph(
                 )
             }
 
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .background(
-                        LocalMusicThemeColors.current.playerSurface.copy(alpha = whiteSurfaceAlpha)
-                    )
-            )
+            // 迷你状态是液态玻璃（透出后面模糊的页面），展开时淡出，换成上面封面取色的背景
+            if (whiteSurfaceAlpha > 0.01f) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .graphicsLayer { alpha = whiteSurfaceAlpha }
+                        .then(
+                            if (backdrop != null) Modifier.liquidGlass(cardShape, neutral.glass, neutral, backdrop)
+                            else Modifier.liquidGlass(cardShape, neutral.glass, neutral)
+                        )
+                )
+            }
 
             Box(
                 modifier = Modifier
@@ -405,24 +402,24 @@ private fun AppleMusicPlayerMorph(
                     modifier = Modifier
                         .offset(
                             x = lerpDp(
-                                lerpDp(12.dp, artWorkHPadding, p),
-                                lerpDp(12.dp, 32.dp, p),
+                                lerpDp(miniCoverInset, artWorkHPadding, p),
+                                lerpDp(miniCoverInset, 32.dp, p),
                                 compactArtworkProgress
                             ),
                             y = lerpDp(
-                                lerpDp(10.dp, artWorkVPadding, p),
-                                lerpDp(10.dp, 62.dp, p),
+                                lerpDp(miniCoverInset, artWorkVPadding, p),
+                                lerpDp(miniCoverInset, 62.dp, p),
                                 compactArtworkProgress
                             )
                         )
                         .size(
                             lerpDp(
-                                lerpDp(50.dp, artCoverImageSize, p),
-                                lerpDp(50.dp, lyricCoverImageSize, p),
+                                lerpDp(miniCoverSize, artCoverImageSize, p),
+                                lerpDp(miniCoverSize, lyricCoverImageSize, p),
                                 compactArtworkProgress
                             )
                         )
-                        .clip(RoundedCornerShape(lerpDp(14.dp, 18.dp, p)))
+                        .clip(RoundedCornerShape(lerpDp(8.dp, 18.dp, p)))
                 )
 
                 if (miniContentAlpha > 0.01f) {
@@ -430,6 +427,8 @@ private fun AppleMusicPlayerMorph(
                         song = song,
                         isPlaying = isPlaying,
                         alpha = miniContentAlpha,
+                        height = miniHeight,
+                        startPadding = miniCoverInset + miniCoverSize + 10.dp,
                         onPlayPauseClick = onPlayPauseClick,
                         onPlayNextClick = {
                             playerViewModel.playNext()
@@ -468,37 +467,39 @@ private fun MiniContent(
     song: SongUiState,
     isPlaying: Boolean,
     alpha: Float,
+    height: Dp,
+    // 左边留给封面的宽度（封面本身由外层画，展开时要和全屏的封面做形变）
+    startPadding: Dp,
     onPlayPauseClick: () -> Unit,
     onPlayNextClick: () -> Unit
 ) {
+    val neutral = LocalMusicThemeColors.current.neutral
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(70.dp)
+            .height(height)
             .alpha(alpha)
-            .padding(horizontal = 12.dp),
+            .padding(start = startPadding, end = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Spacer(modifier = Modifier.width(62.dp))
-
         Column(
             modifier = Modifier.weight(1f)
         ) {
             Text(
                 text = song.songTitle,
-                color = LocalMusicThemeColors.current.textPrimary,
-                fontSize = 16.sp,
+                color = neutral.label,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(modifier = Modifier.height(3.dp))
+            Spacer(modifier = Modifier.height(1.dp))
 
             Text(
                 text = song.singer,
-                color = LocalMusicThemeColors.current.textSecondary,
-                fontSize = 12.sp,
+                color = neutral.labelSecondary,
+                fontSize = 13.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -509,9 +510,9 @@ private fun MiniContent(
                 painter = painterResource(
                     if (isPlaying) R.drawable.ic_pause_mini else R.drawable.ic_play_mini
                 ),
-                contentDescription = null,
-                tint = LocalMusicThemeColors.current.primary,
-                modifier = Modifier.size(30.dp)
+                contentDescription = if (isPlaying) "暂停" else "播放",
+                tint = neutral.label,
+                modifier = Modifier.size(28.dp)
             )
         }
 
@@ -520,9 +521,9 @@ private fun MiniContent(
         }) {
             Icon(
                 painter = painterResource(R.drawable.ic_next_mini),
-                contentDescription = null,
-                tint = LocalMusicThemeColors.current.primary,
-                modifier = Modifier.size(30.dp)
+                contentDescription = "下一首",
+                tint = neutral.label,
+                modifier = Modifier.size(28.dp)
             )
         }
     }
