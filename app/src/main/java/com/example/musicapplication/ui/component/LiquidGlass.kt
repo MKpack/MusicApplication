@@ -4,17 +4,21 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
-import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawOutline
-import androidx.compose.ui.graphics.shadow.Shadow
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.example.musicapplication.ui.theme.NeutralColors
+import kotlin.math.ceil
 
 /**
  * 液态玻璃的外观：半透明底色 + 顶部的柔和光泽 + 左上亮、右下暗的渐变描边。
@@ -55,12 +59,44 @@ fun Modifier.liquidGlass(
     sigma: Dp = 10.dp,
 ): Modifier = backdropBlur(backdrop, shape, sigma).liquidGlass(shape, fill, neutral)
 
-/** 玻璃控件下面柔和的投影，深色模式下更深一些 */
-fun Modifier.glassShadow(shape: Shape, neutral: NeutralColors): Modifier = dropShadow(
+/** 玻璃控件下面柔和的投影，深色模式下更深一些。[alpha] 在绘制时读取，用于跟着动画淡出 */
+fun Modifier.glassShadow(shape: Shape, neutral: NeutralColors, alpha: () -> Float = { 1f }): Modifier = softShadow(
     shape = shape,
-    shadow = Shadow(
-        radius = 14.dp,
-        color = Color.Black.copy(alpha = if (neutral.isDark) 0.5f else 0.12f),
-        offset = DpOffset(0.dp, 6.dp)
-    )
+    color = Color.Black.copy(alpha = if (neutral.isDark) 0.5f else 0.12f),
+    radius = 14.dp,
+    offsetY = 6.dp,
+    alpha = alpha
 )
+
+/**
+ * 柔和的投影：把形状模糊后画在控件下面，效果和 Modifier.dropShadow 相同（模糊半径的换算一样）。
+ *
+ * 不用 dropShadow 的原因：它每遇到一个新尺寸，都要在主线程用 CPU 重新模糊生成一张阴影图并上传成新纹理，
+ * 生成过的还会一直缓存着。底栏收起、迷你播放器移动的动画里尺寸每帧都在变，滑动列表时会明显掉帧。
+ * 这里改成把形状录进一个 GraphicsLayer，用 RenderEffect 在 GPU 上模糊，尺寸变了只需要重录一个形状。
+ */
+fun Modifier.softShadow(
+    shape: Shape,
+    color: Color,
+    radius: Dp,
+    offsetY: Dp = 0.dp,
+    alpha: () -> Float = { 1f },
+): Modifier = drawWithCache {
+    val radiusPx = radius.toPx()
+    // 模糊会往外扩散大约两倍半径，图层四周多留出这么多
+    val pad = ceil(radiusPx * 2).toInt()
+    val outline = shape.createOutline(size, layoutDirection, this)
+    val layer = obtainGraphicsLayer()
+    layer.renderEffect = if (radiusPx > 0f) BlurEffect(radiusPx, radiusPx, TileMode.Decal) else null
+    layer.topLeft = IntOffset(-pad, -pad + offsetY.roundToPx())
+    layer.record(size = IntSize(ceil(size.width).toInt() + pad * 2, ceil(size.height).toInt() + pad * 2)) {
+        translate(pad.toFloat(), pad.toFloat()) {
+            drawOutline(outline, color)
+        }
+    }
+    onDrawWithContent {
+        layer.alpha = alpha().coerceIn(0f, 1f)
+        drawLayer(layer)
+        drawContent()
+    }
+}

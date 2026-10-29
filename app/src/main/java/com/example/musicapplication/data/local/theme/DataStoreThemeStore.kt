@@ -39,4 +39,22 @@ class DataStoreThemeStore @Inject constructor(
             prefs[themePresetKey] = preset.name
         }
     }
+
+    private val backgroundImageKey = stringPreferencesKey("background_image")
+
+    override val backgroundImageFlow: Flow<String?> = context.themeDataStore.data
+        .catch {
+            emit(androidx.datastore.preferences.core.emptyPreferences())
+        }
+        .map { prefs -> prefs[backgroundImageKey] }
+
+    override suspend fun saveBackgroundImage(path: String?) {
+        context.themeDataStore.edit { prefs ->
+            if (path == null) {
+                prefs.remove(backgroundImageKey)
+            } else {
+                prefs[backgroundImageKey] = path
+            }
+        }
+    }
 }

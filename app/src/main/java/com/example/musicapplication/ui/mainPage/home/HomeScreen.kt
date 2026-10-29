@@ -16,14 +16,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -33,7 +30,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,9 +39,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshState
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -54,11 +48,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -75,6 +65,10 @@ import com.example.musicapplication.BuildConfig
 import com.example.musicapplication.domain.model.AppNotification
 import com.example.musicapplication.domain.model.Song
 import com.example.musicapplication.domain.model.SongListKey
+import com.example.musicapplication.ui.component.GlassIconButton
+import com.example.musicapplication.ui.component.GlassTopBarDefaults
+import com.example.musicapplication.ui.component.GlassTopBarScaffold
+import com.example.musicapplication.ui.component.MusicPullToRefreshBox
 import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 import com.example.musicapplication.ui.mainPage.bottombar.LocalMainBottomInset
 import kotlinx.coroutines.flow.collect
@@ -92,15 +86,13 @@ private data class PlaylistUi(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    modifier: Modifier,
     onSongClick: (listKey: SongListKey, songs: List<Song>, index: Int) -> Unit,
-    onSearchClick: () -> Unit,
     context: Context,
+    modifier: Modifier = Modifier,
     homeScreenViewModel: HomeScreenViewModel = hiltViewModel()
 ) {
     val songList by homeScreenViewModel.songListUiState.collectAsState()
     val notificationUiState by homeScreenViewModel.notificationUiState.collectAsState()
-    val pullToRefreshState = rememberPullToRefreshState()
     // 可以获取lazyColumn的快照看是否存在item
     val listState = rememberLazyListState()
 
@@ -118,7 +110,8 @@ fun HomeScreen(
 
     LaunchedEffect(listState, songList.songs) {
         snapshotFlow {
-            val triggerIndex = (songList.songs.lastIndex - 2).coerceAtLeast(0)
+            // 离底部还有 6 首时就开始加载下一页，滑到底之前通常已经加载好了
+            val triggerIndex = (songList.songs.lastIndex - 6).coerceAtLeast(0)
             val triggerSongId = songList.songs.getOrNull(triggerIndex)?.songId ?: return@snapshotFlow false
 
             val triggerKey = "hot_$triggerSongId"
@@ -134,159 +127,142 @@ fun HomeScreen(
             }
     }
 
-    PullToRefreshBox(
-        isRefreshing = songList.isRefreshing,
-        onRefresh = {
-            homeScreenViewModel.refreshHotSongs(isPullToRefresh = true)
-        },
-        modifier = modifier.fillMaxSize(),
-        state = pullToRefreshState,
-        indicator = {
-            DiscoverRefreshIndicator(
-                state = pullToRefreshState,
-                isRefreshing = songList.isRefreshing,
-                modifier = Modifier.align(Alignment.TopCenter)
-            )
-        }
+    GlassTopBarScaffold(
+        listState = listState,
+        modifier = modifier,
+        title = "发现"
     ) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            LocalMusicThemeColors.current.bgTop,
-                            LocalMusicThemeColors.current.bgBottom
-                        )
-                    )
-                ),
-            contentPadding = PaddingValues(
-                start = 18.dp,
-                end = 18.dp,
-                top = 12.dp,
-                // 内容可以滑到悬浮底栏下面，底部留出底栏和迷你播放器的高度
-                bottom = LocalMainBottomInset.current
-            ),
-//            verticalArrangement = Arrangement.spacedBy(22.dp),
-            state = listState
+        MusicPullToRefreshBox(
+            isRefreshing = songList.isRefreshing,
+            onRefresh = {
+                homeScreenViewModel.refreshHotSongs(isPullToRefresh = true)
+            },
+            modifier = Modifier.fillMaxSize(),
+            refreshError = songList.refreshError
         ) {
-            item {
-                DiscoverHeader(
-                    onNotificationClick = {
-                        homeScreenViewModel.loadLatestNotificationByClick()
-                    }
-                )
-            }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 18.dp,
+                    end = 18.dp,
+                    // 列表从屏幕最上面开始画（状态栏是透明的），大标题往下让出状态栏的高度
+                    top = GlassTopBarDefaults.statusBarHeight + 12.dp,
+                    // 内容可以滑到悬浮底栏下面，底部留出底栏和迷你播放器的高度
+                    bottom = LocalMainBottomInset.current
+                ),
+//            verticalArrangement = Arrangement.spacedBy(22.dp),
+                state = listState
+            ) {
+                item {
+                    DiscoverHeader(
+                        onNotificationClick = {
+                            homeScreenViewModel.loadLatestNotificationByClick()
+                        }
+                    )
+                }
 
-            item {
-                Spacer(modifier = Modifier.height(22.dp))
-            }
-
-            item {
-                SearchBar(onSearchClick)
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(22.dp))
-            }
+                item {
+                    Spacer(modifier = Modifier.height(22.dp))
+                }
 
 //            item {
 //                // TODO
 //                RandomPlayCard()
 //            }
 
-            item {
-                SectionHeader(title = "推荐歌单", action = "查看全部")
+                item {
+                    SectionHeader(title = "推荐歌单", action = "查看全部")
 
-                Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                Text("敬请期待")
+                    Text("敬请期待", color = LocalMusicThemeColors.current.textSecondary)
 
 //                LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
 //                    items(playlists) { playlist ->
 //                        PlaylistCard(playlist = playlist)
 //                    }
 //                }
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(22.dp))
-            }
-
-            // TODO 更多 先注释为""等到时候真有在写
-            item {
-                SectionHeader(title = "热门歌曲", action = "")
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(22.dp))
-            }
-
-            itemsIndexed(
-                items = songList.songs,
-                key = { _, song -> "hot_${song.songId}" }
-            ) { index, song ->
-                val shape = when {
-                    songList.songs.size == 1 -> RoundedCornerShape(20.dp)
-                    index == 0 -> RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
-                    index == songList.songs.size - 1 -> RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
-                    else -> RoundedCornerShape(0.dp)
                 }
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(shape)
-                        .background(LocalMusicThemeColors.current.surface)
-                ) {
-                    SongRow(
-                        song = song,
-                        onClick = {
-                            onSongClick(SongListKey.Hot, songList.songs, index)
-                        },
-                        onFavoriteSong = {
-                            homeScreenViewModel.doFavoriteEvent(index)
-                        }
-                    )
 
-                    if (index != songList.songs.lastIndex) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(start = 72.dp),
-                            color = LocalMusicThemeColors.current.border,
-                            thickness = 1.dp
-                        )
-                    }
-                }
-            }
-
-            /**
-             * 最下方如果在下滑还没拿到数据就转圈 --> 表示等待
-             */
-            if (songList.isLoading && songList.songs.isNotEmpty()) {
                 item {
-                    Box(
+                    Spacer(modifier = Modifier.height(22.dp))
+                }
+
+                // TODO 更多 先注释为""等到时候真有在写
+                item {
+                    SectionHeader(title = "热门歌曲", action = "")
+                }
+
+                item {
+                    Spacer(modifier = Modifier.height(22.dp))
+                }
+
+                itemsIndexed(
+                    items = songList.songs,
+                    key = { _, song -> "hot_${song.songId}" }
+                ) { index, song ->
+                    val shape = when {
+                        songList.songs.size == 1 -> RoundedCornerShape(20.dp)
+                        index == 0 -> RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+                        index == songList.songs.size - 1 -> RoundedCornerShape(bottomStart = 20.dp, bottomEnd = 20.dp)
+                        else -> RoundedCornerShape(0.dp)
+                    }
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 14.dp),
-                        contentAlignment = Alignment.Center
+                            .clip(shape)
+                            .background(LocalMusicThemeColors.current.surface)
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = LocalMusicThemeColors.current.primary,
-                            strokeWidth = 2.5.dp
+                        SongRow(
+                            song = song,
+                            onClick = {
+                                onSongClick(SongListKey.Hot, songList.songs, index)
+                            },
+                            onFavoriteSong = {
+                                homeScreenViewModel.doFavoriteEvent(index)
+                            }
                         )
+
+                        if (index != songList.songs.lastIndex) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 72.dp),
+                                color = LocalMusicThemeColors.current.border,
+                                thickness = 1.dp
+                            )
+                        }
                     }
                 }
-            } else if (songList.isEndReached && songList.songs.isNotEmpty()) {
-                item {
-                    Text(
-                        text = "已经到底了",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        textAlign = TextAlign.Center,
-                        color = LocalMusicThemeColors.current.textSecondary,
-                        fontSize = 13.sp
-                    )
+
+                /**
+                 * 最下方如果在下滑还没拿到数据就转圈 --> 表示等待
+                 */
+                if (songList.isLoading && songList.songs.isNotEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 14.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = LocalMusicThemeColors.current.primary,
+                                strokeWidth = 2.5.dp
+                            )
+                        }
+                    }
+                } else if (songList.isEndReached && songList.songs.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "已经到底了",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            textAlign = TextAlign.Center,
+                            color = LocalMusicThemeColors.current.textSecondary,
+                            fontSize = 13.sp
+                        )
+                    }
                 }
             }
         }
@@ -303,56 +279,6 @@ fun HomeScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun DiscoverRefreshIndicator(
-    state: PullToRefreshState,
-    isRefreshing: Boolean,
-    modifier: Modifier = Modifier
-) {
-    val density = LocalDensity.current
-    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val offsetY = with(density) {
-        val hiddenY = -(statusBarTop + 42.dp).toPx()
-        val shownY = (statusBarTop + 18.dp).toPx()
-        val progress = state.distanceFraction.coerceIn(0f, 1f)
-
-        if (isRefreshing) {
-            shownY
-        } else {
-            hiddenY + (shownY - hiddenY) * progress
-        }
-    }
-
-    Box(
-        modifier = modifier
-            .graphicsLayer {
-                translationY = offsetY
-                alpha = if (isRefreshing || state.distanceFraction > 0f) 1f else 0f
-            }
-            .size(36.dp)
-            .clip(CircleShape)
-            .background(LocalMusicThemeColors.current.surface)
-            .border(1.dp, LocalMusicThemeColors.current.border, CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        if (isRefreshing) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(26.dp),
-                color = LocalMusicThemeColors.current.primary,
-                strokeWidth = 2.5.dp
-            )
-        } else {
-            CircularProgressIndicator(
-                progress = { state.distanceFraction.coerceIn(0f, 1f) },
-                color = LocalMusicThemeColors.current.primary,
-                strokeWidth = 3.dp,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-    }
-}
-
 @Composable
 private fun DiscoverHeader(
     onNotificationClick: () -> Unit
@@ -363,14 +289,16 @@ private fun DiscoverHeader(
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Column {
+            // 往上滚走以后，顶栏正中会出现同样的小标题
             Text(
                 text = "发现",
                 color = LocalMusicThemeColors.current.textPrimary,
-                fontSize = 32.sp,
+                fontSize = 34.sp,
+                lineHeight = 42.sp,
                 fontWeight = FontWeight.Bold,
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
 
             Text(
                 text = "今天想听什么？",
@@ -379,20 +307,11 @@ private fun DiscoverHeader(
             )
         }
 
-        IconButton(
-            onClick = onNotificationClick,
-            modifier = Modifier
-                .size(42.dp)
-                .clip(CircleShape)
-                .background(Color.Transparent)
-        ) {
-            Icon(
-                imageVector = Icons.Default.Notifications,
-                contentDescription = null,
-                tint = LocalMusicThemeColors.current.iconMuted,
-                modifier = Modifier.size(21.dp)
-            )
-        }
+        GlassIconButton(
+            icon = Icons.Rounded.Notifications,
+            contentDescription = "通知",
+            onClick = onNotificationClick
+        )
     }
 }
 
@@ -482,47 +401,6 @@ private fun AppNotificationDialog(
     )
 }
 
-
-@Composable
-private fun SearchBar(
-    onClick: () -> Unit
-) {
-    val interactionSource = remember { MutableInteractionSource() }
-
-    Row(
-        modifier = Modifier
-            .fillMaxSize()
-            .height(48.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(LocalMusicThemeColors.current.surface)
-            .border(
-                width = 1.dp,
-                color = LocalMusicThemeColors.current.border,
-                shape = RoundedCornerShape(16.dp)
-            )
-            .padding(horizontal = 14.dp)
-            .clickable(
-                onClick = onClick,
-                indication = null,
-                interactionSource = interactionSource
-            ),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(
-            painter = painterResource(R.drawable.search_solid_full),
-            contentDescription = "搜索",
-            tint = LocalMusicThemeColors.current.iconMuted,
-            modifier = Modifier.size(20.dp)
-        )
-        Spacer(modifier = Modifier.width(10.dp))
-        Text(
-            text = "搜索歌曲、歌手、歌单",
-            color = LocalMusicThemeColors.current.textHint,
-            fontSize = 15.sp,
-            maxLines = 1
-        )
-    }
-}
 
 @Composable
 private fun RandomPlayCard() {

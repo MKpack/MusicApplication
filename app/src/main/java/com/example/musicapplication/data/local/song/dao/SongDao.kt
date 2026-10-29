@@ -45,17 +45,13 @@ interface SongDao {
     @Query("SELECT * FROM songs WHERE songId IN (:songIds)")
     fun observeSongsByIds(songIds: List<Long>): Flow<List<SongEntity>>
 
-    @Query("""
-        SELECT songs.*
-        FROM songs
-        INNER JOIN song_list_items
-        ON songs.songId = song_list_items.songId
-        WHERE song_list_items.listKey = :listKey
-        AND song_list_items.position = :position
-        LIMIT 1
-    """)
-    suspend fun getSongByListPosition(listKey: String, position: Long): SongEntity?
+    @Query("SELECT * FROM songs WHERE songId IN (:songIds)")
+    suspend fun getSongsByIds(songIds: List<Long>): List<SongEntity>
 
     @Query("SELECT isLoved FROM songs WHERE songId = :songId")
     suspend fun getLovedState(songId: Long): Boolean?
+
+    /** 播放器上的收藏状态跟着这里变；表里没有这首歌时是 null */
+    @Query("SELECT isLoved FROM songs WHERE songId = :songId")
+    fun observeLovedState(songId: Long): Flow<Boolean?>
 }

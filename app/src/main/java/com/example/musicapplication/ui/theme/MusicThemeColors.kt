@@ -10,8 +10,8 @@ data class MusicThemeColors(
     val primary: Color,
     val accent: Color,
     val primarySoft: Color,
-    val bgTop: Color,
-    val bgBottom: Color,
+    // 页面底色：浅色是纯白，深色是纯黑，和主题色无关
+    val background: Color,
     val cardSoft: Color,
     val playerSurface: Color,
 
@@ -20,11 +20,11 @@ data class MusicThemeColors(
     val textPrimary: Color = Color(0xFF111111),
     val textSecondary: Color = Color(0xFF66736D),
     val textHint: Color = Color(0xFFA0AAA5),
-    val border: Color = Color(0xFFDCEBE3),
+    val border: Color = Color(0xFFE5E5EA),
     val disabledContainer: Color = Color(0xFFCFE8D8),
     val disabledContent: Color = Color(0xFF6F8A79),
     val iconMuted: Color = Color(0xFF78857D),
-    val divider: Color = Color(0xFFE1EDE6),
+    val divider: Color = Color(0xFFE5E5EA),
 
     // iOS 风格的中性色，跟随深色模式变化。改版后的新页面（欢迎页、登录注册）用这一组，旧页面继续用上面的字段
     val neutral: NeutralColors = NeutralColors.Light
@@ -86,18 +86,39 @@ data class NeutralColors(
 }
 
 fun MusicThemePreset.toMusicThemeColors(darkTheme: Boolean = false): MusicThemeColors {
+    if (darkTheme) {
+        // 深色：纯黑底、#1C1C1E 的卡片（iOS 深色的颜色）；主题色的浅底换成主题色的半透明，叠在黑底上是暗一点的主题色
+        return MusicThemeColors(
+            primary = primary,
+            accent = accent,
+            primarySoft = primary.copy(alpha = 0.2f),
+            background = Color.Black,
+            cardSoft = primary.copy(alpha = 0.16f),
+            playerSurface = Color(0xFF1C1C1E),
+            surface = Color(0xFF1C1C1E),
+            field = Color(0xFF1C1C1E),
+            textPrimary = Color.White,
+            textSecondary = Color(0x9EEBEBF5),
+            textHint = Color(0x4DEBEBF5),
+            border = Color(0xFF2C2C2E),
+            disabledContainer = primary.copy(alpha = 0.2f),
+            disabledContent = primary.copy(alpha = 0.55f),
+            iconMuted = Color(0xFF8E8E93),
+            divider = Color(0xFF38383A),
+            neutral = NeutralColors.Dark
+        )
+    }
     return MusicThemeColors(
         primary = primary,
         accent = accent,
         primarySoft = primarySoft,
-        bgTop = bgTop,
-        bgBottom = bgBottom,
+        background = Color.White,
         cardSoft = cardSoft,
         playerSurface = playerSurface,
         // 不可用按钮的颜色跟随主题色，原来固定的浅绿色只适合松石绿主题
         disabledContainer = primarySoft,
         disabledContent = primary.copy(alpha = 0.55f),
-        neutral = if (darkTheme) NeutralColors.Dark else NeutralColors.Light
+        neutral = NeutralColors.Light
     )
 }
 

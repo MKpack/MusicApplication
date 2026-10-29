@@ -10,6 +10,7 @@ import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
@@ -42,6 +43,8 @@ fun MusicApplicationTheme(
     // 改成false，原因：Android 12+ 的动态色会根据系统壁纸改颜色，会覆盖你自己的音乐 App 主题，调 UI 时会很乱。
     dynamicColor: Boolean = false,
     themePreset: MusicThemePreset = MusicThemePreset.Red,
+    // 自定义页面背景图的本地路径，用默认背景时是 null
+    backgroundImage: String? = null,
     content: @Composable () -> Unit
 ) {
 
@@ -56,17 +59,17 @@ fun MusicApplicationTheme(
         darkTheme -> darkColorScheme(
             primary = musicColors.primary,
             secondary = musicColors.accent,
-            background = Color(0xFF0B0F0D),
-            surface = Color(0xFF151A17),
+            background = musicColors.background,
+            surface = musicColors.surface,
             onPrimary = Color.White,
             onSecondary = Color.White,
-            onBackground = Color(0xFFF4F7F5),
-            onSurface = Color(0xFFF4F7F5)
+            onBackground = musicColors.textPrimary,
+            onSurface = musicColors.textPrimary
         )
         else -> lightColorScheme(
             primary = musicColors.primary,
             secondary = musicColors.accent,
-            background = musicColors.bgTop,
+            background = musicColors.background,
             surface = musicColors.surface,
             onPrimary = Color.White,
             onSecondary = Color.White,
@@ -76,7 +79,8 @@ fun MusicApplicationTheme(
     }
 
     CompositionLocalProvider(
-        LocalMusicThemeColors provides musicColors
+        LocalMusicThemeColors provides musicColors,
+        LocalPageBackgroundImage provides backgroundImage
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
@@ -85,3 +89,6 @@ fun MusicApplicationTheme(
         )
     }
 }
+
+/** 自定义页面背景图（本地文件路径），用默认背景（纯白 / 纯黑）时是 null。由 [MusicApplicationTheme] 提供 */
+val LocalPageBackgroundImage = staticCompositionLocalOf<String?> { null }

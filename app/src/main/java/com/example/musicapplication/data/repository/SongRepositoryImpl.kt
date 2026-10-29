@@ -24,6 +24,7 @@ import com.example.musicapplication.domain.model.PageLoadResult
 import com.example.musicapplication.domain.model.Song
 import com.example.musicapplication.domain.model.SongListKey
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -118,7 +119,7 @@ class SongRepositoryImpl @Inject constructor(
             )
         }
 
-        val nextPage = (meta?.current ?: 0) + 1
+        val nextPage = nextPageNumber(meta?.current ?: 0L, meta?.size ?: 0L, pageSize)
 
         return when (val result = requestSongs(listKey, nextPage, pageSize)) {
             is RepositoryWorkResult.Success -> {
@@ -162,49 +163,12 @@ class SongRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getSongPosition(
-        listKey: SongListKey,
-        songId: Long
-    ): Long? {
-        return songListDao.getPosition(listKey.value, songId)
+    override suspend fun getListSongs(listKey: SongListKey): List<Song> {
+        return observeSongs(listKey).first()
     }
 
-    override suspend fun ensureSongAtPosition(
-        listKey: SongListKey,
-        position: Long,
-        pageSize: Long
-    ): RepositoryWorkResult<Song?> {
-        if (position < 0) return RepositoryWorkResult.Success(null)
-
-        val localSong = songDao.getSongByListPosition(listKey.value, position)
-        if (localSong != null) {
-            return RepositoryWorkResult.Success(localSong.toSong())
-        }
-
-        val meta = songListMetaDao.getMeta(listKey.value)
-        if (meta != null && position >= meta.total) {
-            return RepositoryWorkResult.Success(null)
-        }
-
-        val pageNum = position / pageSize + 1
-
-        return when (val result = requestSongs(listKey, pageNum, pageSize)) {
-            is RepositoryWorkResult.Success -> {
-                savePageToLocal(
-                    listKey = listKey,
-                    page = result.data,
-                    isRefresh = false
-                )
-                RepositoryWorkResult.Success(
-                    songDao.getSongByListPosition(listKey.value, position)?.toSong()
-                )
-            }
-            is RepositoryWorkResult.Failure -> result
-        }
-    }
-
-    override suspend fun getSongListTotal(listKey: SongListKey): Long? {
-        return songListMetaDao.getMeta(listKey.value)?.total
+    override fun observeSongLoved(songId: Long): Flow<Boolean?> {
+        return songDao.observeLovedState(songId)
     }
 
     /**
@@ -287,7 +251,9 @@ class SongRepositoryImpl @Inject constructor(
      * recent play insert
      */
     override suspend fun addRecentPlay(song: Song) {
-        songRecentPlayDao.insertRecentSong(song.toSongRecentPlayEntity())
+        // 收藏状态以数据库为准：歌加入播放队列以后可能又被收藏或取消收藏了
+        val isLoved = songDao.getLovedState(song.songId) ?: song.isLoved
+        songRecentPlayDao.insertRecentSong(song.copy(isLoved = isLoved).toSongRecentPlayEntity())
         songRecentPlayDao.trimRecentSongs(100)
     }
 
@@ -396,3 +362,10 @@ class SongRepositoryImpl @Inject constructor(
         }
     }
 }
+
+/**
+ * 下一页的页码。本地已经按每页 [loadedPageSize] 首加载了 [loadedPages] 页；
+ * 每页数量改过（以前每页 5 首，现在 20 首）时按已经加载的数量换算，不能直接用旧的页码，否则会跳过中间的歌。
+ */
+internal fun nextPageNumber(loadedPages: Long, loadedPageSize: Long, pageSize: Long): Long =
+    loadedPages * loadedPageSize / pageSize + 1

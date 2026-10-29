@@ -11,19 +11,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LibraryMusic
@@ -36,12 +33,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.musicapplication.ui.component.GlassTopBarDefaults
+import com.example.musicapplication.ui.component.GlassTopBarScaffold
+import com.example.musicapplication.ui.component.PageTitle
 import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 import com.example.musicapplication.R
 import androidx.core.net.toUri
@@ -53,130 +52,98 @@ fun AboutMusicScreen(
 ) {
     val context = LocalContext.current
 
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        LocalMusicThemeColors.current.bgTop,
-                        LocalMusicThemeColors.current.bgBottom
-                    )
-                )
+    val listState = rememberLazyListState()
+
+    // 返回按钮固定在左上角；标题在列表第一项，滚走后顶栏正中显示小标题
+    GlassTopBarScaffold(
+        listState = listState,
+        modifier = modifier,
+        title = "关于",
+        onBack = onBack
+    ) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = GlassTopBarDefaults.HorizontalPadding,
+                end = GlassTopBarDefaults.HorizontalPadding,
+                // 标题和顶栏的返回按钮在同一行
+                top = GlassTopBarDefaults.statusBarHeight,
+                bottom = 140.dp
             ),
-        contentPadding = PaddingValues(
-            start = 18.dp,
-            end = 18.dp,
-            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp,
-            bottom = 140.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        item {
-            AboutTopBar(onBack = onBack)
-        }
-
-        item {
-            AppIdentityCard()
-        }
-
-        item {
-            AboutInfoCard(
-                icon = Icons.Default.LibraryMusic,
-                title = "音乐能力",
-                body = "支持在线歌曲、本地音乐、喜欢列表、最近播放和分页播放队列。播放界面会跟随当前主题色保持一致。"
-            )
-        }
-
-        item {
-            AboutInfoCard(
-                icon = Icons.Default.Shuffle,
-                title = "官方网站地址",
-                body = "106.12.119.143",
-                onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, "http://106.12.119.143".toUri())
-                    runCatching {
-                        context.startActivity(intent)
-                    }
-                }
-            )
-        }
-
-        item {
-            AboutInfoCard(
-                icon = Icons.Default.Shuffle,
-                title = "目前缺陷，后期更新会处理",
-                body = "远程大列表的随机播放目前仍基于已加载队列，不能代表完整曲库随机。后续会改为服务端随机会话分页，客户端按页追加随机队列。"
-            )
-        }
-
-        item {
-            AboutInfoCard(
-                icon = Icons.Default.Storage,
-                title = "数据说明",
-                body = "在线歌曲来自服务端返回的数据；下载歌曲建议保存在 App 专属目录，本地音乐只通过设备 Uri 播放，不会上传到服务器。"
-            )
-        }
-
-        item {
-            AboutInfoCard(
-                icon = Icons.Default.VerifiedUser,
-                title = "隐私",
-                body = "账号资料和喜欢列表与登录状态相关；本地播放历史、外部打开音乐记录只存放在当前设备。"
-            )
-        }
-
-        item {
-            AboutInfoCard(
-                icon = Icons.Default.Email,
-                title = "反馈与建议",
-                body = "3198691272@qq.com",
-                onClick = {
-                    val intent = Intent(Intent.ACTION_SENDTO).apply {
-                        data = Uri.parse("mailto:3198691272@qq.com")
-                        putExtra(Intent.EXTRA_SUBJECT, "Shared Music 反馈")
-                    }
-                    runCatching {
-                        context.startActivity(intent)
-                    }
-                }
-            )
-        }
-    }
-}
-
-@Composable
-private fun AboutTopBar(
-    onBack: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(42.dp)
-                .clip(CircleShape)
-                .clickable(onClick = onBack),
-            contentAlignment = Alignment.Center
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = null,
-                tint = LocalMusicThemeColors.current.textPrimary,
-                modifier = Modifier.size(25.dp)
-            )
-        }
+            item {
+                PageTitle(text = "关于")
+            }
 
-        Text(
-            text = "关于",
-            color = LocalMusicThemeColors.current.textPrimary,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 4.dp)
-        )
+            item {
+                AppIdentityCard()
+            }
+
+            item {
+                AboutInfoCard(
+                    icon = Icons.Default.LibraryMusic,
+                    title = "音乐能力",
+                    body = "支持在线歌曲、本地音乐、喜欢列表、最近播放和分页播放队列。播放界面会跟随当前主题色保持一致。"
+                )
+            }
+
+            item {
+                AboutInfoCard(
+                    icon = Icons.Default.Shuffle,
+                    title = "官方网站地址",
+                    body = "106.12.119.143",
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_VIEW, "http://106.12.119.143".toUri())
+                        runCatching {
+                            context.startActivity(intent)
+                        }
+                    }
+                )
+            }
+
+            item {
+                AboutInfoCard(
+                    icon = Icons.Default.Shuffle,
+                    title = "目前缺陷，后期更新会处理",
+                    body = "远程大列表的随机播放目前仍基于已加载队列，不能代表完整曲库随机。后续会改为服务端随机会话分页，客户端按页追加随机队列。"
+                )
+            }
+
+            item {
+                AboutInfoCard(
+                    icon = Icons.Default.Storage,
+                    title = "数据说明",
+                    body = "在线歌曲来自服务端返回的数据；下载歌曲建议保存在 App 专属目录，本地音乐只通过设备 Uri 播放，不会上传到服务器。"
+                )
+            }
+
+            item {
+                AboutInfoCard(
+                    icon = Icons.Default.VerifiedUser,
+                    title = "隐私",
+                    body = "账号资料和喜欢列表与登录状态相关；本地播放历史、外部打开音乐记录只存放在当前设备。"
+                )
+            }
+
+            item {
+                AboutInfoCard(
+                    icon = Icons.Default.Email,
+                    title = "反馈与建议",
+                    body = "3198691272@qq.com",
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_SENDTO).apply {
+                            data = Uri.parse("mailto:3198691272@qq.com")
+                            putExtra(Intent.EXTRA_SUBJECT, "Shared Music 反馈")
+                        }
+                        runCatching {
+                            context.startActivity(intent)
+                        }
+                    }
+                )
+            }
+        }
     }
 }
 

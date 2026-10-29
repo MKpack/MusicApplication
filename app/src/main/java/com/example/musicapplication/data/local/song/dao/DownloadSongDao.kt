@@ -23,6 +23,12 @@ interface DownloadSongDao {
     """)
     fun observeDownloadSongs() : Flow<List<DownloadSongEntity>>
 
+    /**
+     * 查这些歌里哪些已经下载过，播放时优先用本地文件
+     */
+    @Query("SELECT * FROM downloadSongs WHERE songId IN (:songIds)")
+    suspend fun getDownloadSongsByIds(songIds: List<Long>): List<DownloadSongEntity>
+
 
     /**
      * 批量删除传入的songId

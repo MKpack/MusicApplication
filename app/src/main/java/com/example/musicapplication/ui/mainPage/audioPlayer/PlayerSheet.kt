@@ -3,7 +3,6 @@ package com.example.musicapplication.ui.mainPage.audioPlayer
 import android.content.Context
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
-import androidx.annotation.OptIn
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -33,6 +32,7 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,41 +43,57 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.shadow.Shadow
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.constrainHeight
+import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.offset
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.media3.common.util.UnstableApi
+import androidx.lifecycle.repeatOnLifecycle
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
 import com.example.musicapplication.R
-import com.example.musicapplication.domain.model.Song
-import com.example.musicapplication.ui.component.AppleMusicBackground
+import com.example.musicapplication.domain.player.PlayMode
+import com.example.musicapplication.domain.player.PlaybackState
+import com.example.musicapplication.domain.player.QueueItem
+import com.example.musicapplication.domain.player.QueueLoadMoreState
 import com.example.musicapplication.ui.component.Backdrop
+import com.example.musicapplication.ui.component.CoverColorBackground
+import com.example.musicapplication.ui.component.glassShadow
 import com.example.musicapplication.ui.component.liquidGlass
 import com.example.musicapplication.ui.mainPage.bottombar.MiniPlayerAnchor
 import com.example.musicapplication.ui.theme.LocalMusicThemeColors
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
@@ -88,7 +104,6 @@ private enum class PlayerFullPanel {
     Queue
 }
 
-@OptIn(UnstableApi::class)
 @Composable
 fun PlayerSheet(
     context: Context,
@@ -105,20 +120,20 @@ fun PlayerSheet(
 
     val song by playerViewModel.songUiState.collectAsStateWithLifecycle()
     val isPlaying by playerViewModel.isPlaying.collectAsStateWithLifecycle()
-    val colors by playerViewModel.dominantColors.collectAsStateWithLifecycle()
+    val coverColors by playerViewModel.coverColors.collectAsStateWithLifecycle()
     // mini ----> full 进度p, change -> compose again
     val progress = remember { Animatable(0f) }
     val p = progress.value.coerceIn(0f, 1f)
 
 
-    LaunchedEffect(Unit) {
-        playerViewModel.message.collect { it ->
-            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+    // App 在前台时才弹提示，切到后台时 Service 里跳过歌曲之类的提示不弹
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            playerViewModel.message.collect { message ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            }
         }
-    }
-
-    LaunchedEffect(song.cover) {
-        playerViewModel.updateColorsFromSongCover()
     }
 
     SideEffect {
@@ -162,9 +177,8 @@ fun PlayerSheet(
     ) {
         val screenWidth = maxWidth
         val screenHeight = maxHeight
-        val anchor = miniAnchor(screenWidth, screenHeight)
-        // mini拖到full一共要拖动多少px：迷你播放器的上边缘到屏幕顶部
-        val dragRangePx = with(density) { anchor.y.toPx() }.coerceAtLeast(1f)
+        // 底栏收起、展开时迷你播放器的位置每帧都在变，只在布局阶段和拖动时读，播放器不用跟着每帧重组
+        val anchor = { miniAnchor(screenWidth, screenHeight) }
 
         fun settle(velocity: Float) {
             when {
@@ -179,6 +193,8 @@ fun PlayerSheet(
         }
 
         val dragState = rememberDraggableState { delta ->
+            // mini拖到full一共要拖动多少px：迷你播放器的上边缘到屏幕顶部
+            val dragRangePx = with(density) { anchor().y.toPx() }.coerceAtLeast(1f)
             scope.launch {
                 val next = (progress.value - delta / dragRangePx).coerceIn(0f, 1f)
                 progress.snapTo(next)
@@ -193,15 +209,10 @@ fun PlayerSheet(
             screenHeight = screenHeight,
             anchor = anchor,
             backdrop = backdrop,
-            dominantColor = colors.firstOrNull() ?: Color.DarkGray,
-            secondaryColor = colors.getOrNull(1) ?: Color.Black,
+            coverColors = coverColors,
             onClick = { expand() },
             onPlayPauseClick = {
-                if (isPlaying) {
-                    playerViewModel.pause()
-                } else {
-                    playerViewModel.resume()
-                }
+                playerViewModel.togglePlayPause()
             },
             modifier = Modifier.fillMaxSize(),
             dragModifier = Modifier
@@ -217,7 +228,6 @@ fun PlayerSheet(
     }
 }
 
-@OptIn(UnstableApi::class)
 @Composable
 private fun AppleMusicPlayerMorph(
     song: SongUiState,
@@ -225,10 +235,9 @@ private fun AppleMusicPlayerMorph(
     progress: Float,
     screenWidth: Dp,
     screenHeight: Dp,
-    anchor: MiniPlayerAnchor,
+    anchor: () -> MiniPlayerAnchor,
     backdrop: Backdrop?,
-    dominantColor: Color,
-    secondaryColor: Color,
+    coverColors: CoverColors,
     onClick: () -> Unit,
     onPlayPauseClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -237,21 +246,17 @@ private fun AppleMusicPlayerMorph(
 ) {
     val p = progress.coerceIn(0f, 1f)
 
-    val miniHeight = anchor.height
     // 迷你播放器里的封面：36dp，上下左右留一样的边距
     val miniCoverSize = 36.dp
-    val miniCoverInset = (miniHeight - miniCoverSize) / 2
+    val miniCoverInset = { (anchor().height - miniCoverSize) / 2 }
 
-    // 圆角：迷你状态是胶囊；展开时先过渡到 18dp，快到全屏时再变成直角
-    val cardRadius = when {
-        p < 0.92f -> lerpDp(miniHeight / 2, 18.dp, smoothProgress(p, 0f, 0.25f))
-        else -> lerpDp(18.dp, 0.dp, smoothProgress(p, 0.92f, 1f))
+    // 圆角：迷你状态是胶囊；展开时先过渡到 18dp，快到全屏时再变成直角。
+    // 迷你状态直接用 50% 圆角，这样组合时不用读迷你播放器的高度
+    val cardShape = when {
+        p == 0f -> RoundedCornerShape(50)
+        p < 0.92f -> RoundedCornerShape(lerpDp(anchor().height / 2, 18.dp, smoothProgress(p, 0f, 0.25f)))
+        else -> RoundedCornerShape(lerpDp(18.dp, 0.dp, smoothProgress(p, 0.92f, 1f)))
     }
-
-    val cardWidth = lerpDp(anchor.width, screenWidth, p)
-    val cardHeight = lerpDp(anchor.height, screenHeight, p)
-    val cardX = lerpDp(anchor.x, 0.dp, p)
-    val cardY = lerpDp(anchor.y, 0.dp, p)
 
     val fullBackgroundAlpha = smoothProgress(p, 0.9f, 0.98f)
     val outsideScrimAlpha = smoothProgress(p, 0.01f, 0.32f) *
@@ -307,16 +312,16 @@ private fun AppleMusicPlayerMorph(
     val artWorkVPadding = (screenHeight * 0.6f - artCoverImageSize) / 3 * 2
 
     Box(modifier = modifier) {
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .alpha(fullBackgroundAlpha)
-        ) {
-            AppleMusicBackground(
-                cover = song.cover,
-                dominantColor = dominantColor,
-                secondaryColor = secondaryColor
-            )
+        // 展开的最后一段卡片还有圆角，这一层把四个角补上。背景完全透明时不画：透明度为 0 的图层里的内容照样要录制；
+        // 完全展开时卡片已经铺满全屏、把这一层整个盖住了，也不画，不然两层柔光每帧都要重画
+        if (fullBackgroundAlpha > 0f && p < 1f) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .alpha(fullBackgroundAlpha)
+            ) {
+                CoverColorBackground(colors = coverColors)
+            }
         }
 
         Box(
@@ -325,22 +330,22 @@ private fun AppleMusicPlayerMorph(
                 .background(Color.Black.copy(alpha = 0.45f * outsideScrimAlpha))
         )
 
-        val cardShape = RoundedCornerShape(cardRadius)
         val cardModifier = Modifier
-            .offset(x = cardX, y = cardY)
-            .width(cardWidth)
-            .height(cardHeight)
+            // 位置和大小从迷你播放器插值到全屏
+            .layout { measurable, constraints ->
+                val mini = anchor()
+                val width = constraints.constrainWidth(lerpDp(mini.width, screenWidth, p).roundToPx())
+                val height = constraints.constrainHeight(lerpDp(mini.height, screenHeight, p).roundToPx())
+                val placeable = measurable.measure(Constraints.fixed(width, height))
+                layout(width, height) {
+                    placeable.placeRelative(lerpDp(mini.x, 0.dp, p).roundToPx(), lerpDp(mini.y, 0.dp, p).roundToPx())
+                }
+            }
             .then(dragModifier)
             .then(
                 if (whiteSurfaceAlpha > 0.01f) {
-                    Modifier.dropShadow(
-                        shape = cardShape,
-                        shadow = Shadow(
-                            radius = 14.dp,
-                            color = Color.Black.copy(alpha = (if (neutral.isDark) 0.5f else 0.12f) * whiteSurfaceAlpha),
-                            offset = DpOffset(0.dp, 6.dp)
-                        )
-                    )
+                    // 和底栏一样的玻璃投影，展开时跟着玻璃一起淡出
+                    Modifier.glassShadow(cardShape, neutral, alpha = { whiteSurfaceAlpha })
                 } else {
                     Modifier
                 }
@@ -362,16 +367,14 @@ private fun AppleMusicPlayerMorph(
         Box(
             modifier = cardModifier
         ) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .alpha(cardBackgroundAlpha)
-            ) {
-                AppleMusicBackground(
-                    cover = song.cover,
-                    dominantColor = dominantColor,
-                    secondaryColor = secondaryColor
-                )
+            if (cardBackgroundAlpha > 0f) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .alpha(cardBackgroundAlpha)
+                ) {
+                    CoverColorBackground(colors = coverColors)
+                }
             }
 
             // 迷你状态是液态玻璃（透出后面模糊的页面），展开时淡出，换成上面封面取色的背景
@@ -400,18 +403,21 @@ private fun AppleMusicPlayerMorph(
                     ),
                     contentDescription = null,
                     modifier = Modifier
-                        .offset(
-                            x = lerpDp(
-                                lerpDp(miniCoverInset, artWorkHPadding, p),
-                                lerpDp(miniCoverInset, 32.dp, p),
-                                compactArtworkProgress
-                            ),
-                            y = lerpDp(
-                                lerpDp(miniCoverInset, artWorkVPadding, p),
-                                lerpDp(miniCoverInset, 62.dp, p),
-                                compactArtworkProgress
+                        .offset {
+                            val inset = miniCoverInset()
+                            IntOffset(
+                                x = lerpDp(
+                                    lerpDp(inset, artWorkHPadding, p),
+                                    lerpDp(inset, 32.dp, p),
+                                    compactArtworkProgress
+                                ).roundToPx(),
+                                y = lerpDp(
+                                    lerpDp(inset, artWorkVPadding, p),
+                                    lerpDp(inset, 62.dp, p),
+                                    compactArtworkProgress
+                                ).roundToPx()
                             )
-                        )
+                        }
                         .size(
                             lerpDp(
                                 lerpDp(miniCoverSize, artCoverImageSize, p),
@@ -423,12 +429,14 @@ private fun AppleMusicPlayerMorph(
                 )
 
                 if (miniContentAlpha > 0.01f) {
+                    val playback by playerViewModel.playbackState.collectAsStateWithLifecycle()
                     MiniContent(
                         song = song,
                         isPlaying = isPlaying,
+                        hasNext = playback.hasNext,
                         alpha = miniContentAlpha,
-                        height = miniHeight,
-                        startPadding = miniCoverInset + miniCoverSize + 10.dp,
+                        height = { anchor().height },
+                        startPadding = { miniCoverInset() + miniCoverSize + 10.dp },
                         onPlayPauseClick = onPlayPauseClick,
                         onPlayNextClick = {
                             playerViewModel.playNext()
@@ -466,10 +474,12 @@ private fun AppleMusicPlayerMorph(
 private fun MiniContent(
     song: SongUiState,
     isPlaying: Boolean,
+    hasNext: Boolean,
     alpha: Float,
-    height: Dp,
+    // 和迷你播放器一样高。底栏收起、展开时每帧都在变，所以传函数，在布局阶段读
+    height: () -> Dp,
     // 左边留给封面的宽度（封面本身由外层画，展开时要和全屏的封面做形变）
-    startPadding: Dp,
+    startPadding: () -> Dp,
     onPlayPauseClick: () -> Unit,
     onPlayNextClick: () -> Unit
 ) {
@@ -477,9 +487,16 @@ private fun MiniContent(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(height)
+            .layout { measurable, constraints ->
+                val heightPx = height().roundToPx()
+                val start = startPadding().roundToPx()
+                val placeable = measurable.measure(
+                    constraints.copy(minHeight = heightPx, maxHeight = heightPx).offset(horizontal = -start)
+                )
+                layout(placeable.width + start, heightPx) { placeable.placeRelative(start, 0) }
+            }
             .alpha(alpha)
-            .padding(start = startPadding, end = 6.dp),
+            .padding(end = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(
@@ -516,20 +533,20 @@ private fun MiniContent(
             )
         }
 
-        IconButton(onClick = {
-            onPlayNextClick()
-        }) {
+        IconButton(
+            onClick = onPlayNextClick,
+            enabled = hasNext
+        ) {
             Icon(
                 painter = painterResource(R.drawable.ic_next_mini),
                 contentDescription = "下一首",
-                tint = neutral.label,
+                tint = if (hasNext) neutral.label else neutral.labelSecondary,
                 modifier = Modifier.size(28.dp)
             )
         }
     }
 }
 
-@OptIn(UnstableApi::class)
 @Composable
 private fun FullContent(
     song: SongUiState,
@@ -541,18 +558,16 @@ private fun FullContent(
     onMoreClick: () -> Unit,
     playerViewModel: PlayerViewModel
 ) {
-    val queue by playerViewModel.songQueue.collectAsState()
-    val queueKeys by playerViewModel.queueKeys.collectAsState()
-    val currentIndex by playerViewModel.currentIndex.collectAsState()
-    val playMode by playerViewModel.playMode.collectAsState()
+    val playback by playerViewModel.playbackState.collectAsStateWithLifecycle()
+    val lyricsUiState by playerViewModel.lyricsUiState.collectAsStateWithLifecycle()
+    // 进度每 200ms 变一次，只在进度条和歌词里读，整个全屏页不用跟着重组
+    val positionMs = playerViewModel.positionMs.collectAsStateWithLifecycle()
+    val playMode = playback.playMode
     val panelTextAlpha by animateFloatAsState(
         targetValue = if (selectedPanel == PlayerFullPanel.Artwork) 0f else 1f,
         animationSpec = tween(durationMillis = 520),
         label = "playerPanelTextAlpha"
     )
-
-    val lyricsUiState by playerViewModel.lyricsUiState.collectAsState()
-    val currentPosition by playerViewModel.currentPosition.collectAsState()
 
     Column(
         modifier = Modifier
@@ -583,10 +598,7 @@ private fun FullContent(
                 PanelTopContent(
                     selectedPanel = selectedPanel,
                     song = song,
-                    queue = queue,
-                    queueKeys = queueKeys,
-                    currentIndex = currentIndex,
-                    playMode = playMode,
+                    playback = playback,
                     onShuffleClick = {
                         playerViewModel.changePlayMode(PlayMode.Shuffle)
                     },
@@ -612,11 +624,14 @@ private fun FullContent(
                     onMoveSong = { from, to ->
                         playerViewModel.moveQueueSong(from, to)
                     },
+                    onLoadMoreQueue = {
+                        playerViewModel.loadMoreQueue()
+                    },
                     modifier = Modifier
                         .fillMaxSize()
                         .alpha(panelTextAlpha),
                     lyricsUiState = lyricsUiState,
-                    currentPosition = currentPosition
+                    positionMs = { positionMs.value }
                 )
             }
         }
@@ -624,12 +639,16 @@ private fun FullContent(
         // 下方 30%：进度条、播放控制和面板切换。
         PlaybackFooter(
             isPlaying = isPlaying,
+            hasPrevious = playback.hasPrevious,
+            hasNext = playback.hasNext,
+            positionMs = { positionMs.value },
+            durationMs = playback.durationMs,
+            onSeek = { playerViewModel.seekTo(it) },
             onPlayPauseClick = onPlayPauseClick,
             onPreviousClick = { playerViewModel.playPrevious() },
             onNextClick = { playerViewModel.playNext() },
             selectedPanel = selectedPanel,
             onPanelChange = onPanelChange,
-            playerViewModel = playerViewModel,
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(3f)
@@ -699,10 +718,7 @@ private fun ArtworkTopContent(
 private fun PanelTopContent(
     selectedPanel: PlayerFullPanel,
     song: SongUiState,
-    queue: List<Song>,
-    queueKeys: List<String>,
-    currentIndex: Int,
-    playMode: PlayMode,
+    playback: PlaybackState,
     onShuffleClick: () -> Unit,
     onRepeatClick: () -> Unit,
     onSequenceClick: () -> Unit,
@@ -710,9 +726,10 @@ private fun PanelTopContent(
     onFavoriteSong: () -> Unit,
     onSongClick: (Int) -> Unit,
     onMoveSong: (Int, Int) -> Unit,
+    onLoadMoreQueue: () -> Unit,
     modifier: Modifier = Modifier,
     lyricsUiState: LyricsUiState,
-    currentPosition: Int
+    positionMs: () -> Long
 ) {
     Column(
         modifier = modifier,
@@ -733,11 +750,10 @@ private fun PanelTopContent(
                 LyricsPanel(
                     modifier = Modifier
                         .fillMaxWidth()
-//                        .height(355.dp),
                         .weight(1f)
                         .padding(bottom = 42.dp),
                     lyricsUiState = lyricsUiState,
-                    currentPosition = currentPosition
+                    positionMs = positionMs
                 )
             }
 
@@ -745,7 +761,7 @@ private fun PanelTopContent(
                 Spacer(modifier = Modifier.height(18.dp))
 
                 PlaybackModeRow(
-                    playMode = playMode,
+                    playMode = playback.playMode,
                     onShuffleClick = onShuffleClick,
                     onRepeatClick = onRepeatClick,
                     onSequenceClick = onSequenceClick
@@ -754,16 +770,18 @@ private fun PanelTopContent(
                 Spacer(modifier = Modifier.height(18.dp))
 
                 QueuePanel(
-                    queue = queue,
-                    queueKeys = queueKeys,
-                    currentIndex = currentIndex,
+                    queue = playback.queue,
+                    playbackOrder = playback.playbackOrder,
+                    currentItemId = playback.currentItem?.id,
+                    sourceTitle = playback.currentItem?.sourceTitle,
+                    // 随机播放时显示的是打乱后的顺序，不能拖动排序
+                    canReorder = playback.playMode != PlayMode.Shuffle,
+                    loadMoreState = playback.loadMoreState,
                     onSongClick = onSongClick,
-                    onMoveSong = { from, to ->
-                        onMoveSong(from, to)
-                    },
+                    onMoveSong = onMoveSong,
+                    onLoadMore = onLoadMoreQueue,
                     modifier = Modifier
                         .fillMaxWidth()
-//                        .height(340.dp)
                         .weight(1f)
                         .padding(bottom = 42.dp)
                 )
@@ -774,40 +792,30 @@ private fun PanelTopContent(
     }
 }
 
-@OptIn(UnstableApi::class)
 @Composable
 private fun PlaybackFooter(
     isPlaying: Boolean,
+    hasPrevious: Boolean,
+    hasNext: Boolean,
+    positionMs: () -> Long,
+    durationMs: Long,
+    onSeek: (Long) -> Unit,
     onPlayPauseClick: () -> Unit,
     onPreviousClick: () -> Unit,
     onNextClick: () -> Unit,
     selectedPanel: PlayerFullPanel,
     onPanelChange: (PlayerFullPanel) -> Unit,
-    playerViewModel: PlayerViewModel,
     modifier: Modifier = Modifier
 ) {
-    val queue by playerViewModel.songQueue.collectAsState()
-    val currentIndex by playerViewModel.currentIndex.collectAsState()
-    val playMode by playerViewModel.playMode.collectAsState()
-    val hasValidCurrent = queue.isNotEmpty() && currentIndex in queue.indices
-    val canPlayPrevious = hasValidCurrent && when (playMode) {
-        PlayMode.Sequence,
-        PlayMode.Shuffle -> currentIndex > 0
-        PlayMode.Repeat,
-        PlayMode.RepeatOne -> true
-    }
-    val canPlayNext = hasValidCurrent && when (playMode) {
-        PlayMode.Sequence,
-        PlayMode.Shuffle -> currentIndex < queue.lastIndex
-        PlayMode.Repeat,
-        PlayMode.RepeatOne -> true
-    }
-
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        PlayerProgressBar(playerViewModel)
+        PlayerProgressBar(
+            positionMs = positionMs,
+            durationMs = durationMs,
+            onSeek = onSeek
+        )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -816,13 +824,13 @@ private fun PlaybackFooter(
         ) {
             IconButton(
                 onClick = onPreviousClick,
-                enabled = canPlayPrevious,
+                enabled = hasPrevious,
                 modifier = Modifier.size(86.dp)
             ) {
                 Icon(
                     painter = painterResource(R.drawable.backward_solid_full),
                     contentDescription = null,
-                    tint = Color.White.copy(alpha = if (canPlayPrevious) 1f else 0.28f),
+                    tint = Color.White.copy(alpha = if (hasPrevious) 1f else 0.28f),
                     modifier = Modifier.size(52.dp)
                 )
             }
@@ -843,13 +851,13 @@ private fun PlaybackFooter(
 
             IconButton(
                 onClick = onNextClick,
-                enabled = canPlayNext,
+                enabled = hasNext,
                 modifier = Modifier.size(86.dp)
             ) {
                 Icon(
                     painter = painterResource(R.drawable.forward_solid_full),
                     contentDescription = null,
-                    tint = Color.White.copy(alpha = if (canPlayNext) 1f else 0.28f),
+                    tint = Color.White.copy(alpha = if (hasNext) 1f else 0.28f),
                     modifier = Modifier.size(52.dp)
                 )
             }
@@ -1154,9 +1162,17 @@ private fun PlaybackModeButton(
 private fun LyricsPanel(
     lyricsUiState: LyricsUiState,
     modifier: Modifier = Modifier,
-    currentPosition: Int
+    positionMs: () -> Long
 ) {
     val lines = lyricsUiState.lines
+    val currentPositionMs by rememberUpdatedState(positionMs)
+    // 进度每 200ms 变一次，但只有换到下一句时才需要重组和滚动
+    val currentIndex by remember(lines) {
+        derivedStateOf {
+            val seconds = currentPositionMs() / 1000f
+            lines.indexOfLast { it.timeSeconds <= seconds }.coerceAtLeast(0)
+        }
+    }
 
     Box(
         modifier = modifier,
@@ -1188,9 +1204,6 @@ private fun LyricsPanel(
                 BoxWithConstraints(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    val currentIndex = lines.indexOfLast {
-                        it.timeSeconds <= currentPosition
-                    }.coerceAtLeast(0)
                     val lazyListState = rememberLazyListState()
                     val density = LocalDensity.current
                     val centerOffset = with(density) { (maxHeight / 2).roundToPx() }
@@ -1234,17 +1247,45 @@ private fun LyricsPanel(
 
 @Composable
 private fun QueuePanel(
-    queue: List<Song>,
-    queueKeys: List<String>,
-    currentIndex: Int,
+    // 播放器里的队列顺序
+    queue: List<QueueItem>,
+    // 队列下标按实际播放先后排好的顺序
+    playbackOrder: List<Int>,
+    currentItemId: String?,
+    sourceTitle: String?,
+    canReorder: Boolean,
+    loadMoreState: QueueLoadMoreState,
     onSongClick: (Int) -> Unit,
     onMoveSong: (Int, Int) -> Unit,
+    onLoadMore: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // 拖动时先在这份本地列表里挪，界面马上跟手；同时让播放器挪同样的位置。
+    // 播放器的新顺序要过一两帧才传回来，拖动库每挪一步都按当前界面上的位置算下一步，不能等它
+    var draggingQueue by remember { mutableStateOf<List<QueueItem>?>(null) }
     val lazyListState = rememberLazyListState()
     val reorderableLazyListState = rememberReorderableLazyListState(lazyListState) { from, to ->
+        draggingQueue = (draggingQueue ?: queue).toMutableList().apply {
+            add(to.index, removeAt(from.index))
+        }
         onMoveSong(from.index, to.index)
     }
+    val isDragging = reorderableLazyListState.isAnyItemDragging
+    // 松手后等播放器的顺序跟上，再改回显示播放器里的队列
+    LaunchedEffect(isDragging, queue) {
+        val local = draggingQueue ?: return@LaunchedEffect
+        if (isDragging) return@LaunchedEffect
+        if (local.map { it.id } != queue.map { it.id }) delay(300)
+        draggingQueue = null
+    }
+
+    // 按实际播放顺序显示：不随机时就是队列顺序，随机时是打乱后的顺序（不能拖动）
+    val rows = when {
+        canReorder -> draggingQueue ?: queue
+        playbackOrder.size == queue.size -> playbackOrder.map { queue[it] }
+        else -> queue
+    }
+    val currentPosition = rows.indexOfFirst { it.id == currentItemId }
 
     Column(
         modifier = modifier
@@ -1257,18 +1298,22 @@ private fun QueuePanel(
             fontWeight = FontWeight.Bold
         )
 
-        Spacer(modifier = Modifier.height(4.dp))
+        if (sourceTitle != null) {
+            Spacer(modifier = Modifier.height(4.dp))
 
-        Text(
-            text = "来自 喜爱歌曲",
-            color = Color.White.copy(alpha = 0.55f),
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold
-        )
+            Text(
+                text = "来自 $sourceTitle",
+                color = Color.White.copy(alpha = 0.55f),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        if (queue.isEmpty()) {
+        if (rows.isEmpty()) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
@@ -1279,26 +1324,117 @@ private fun QueuePanel(
                     fontSize = 16.sp
                 )
             }
-        } else {
+            return@Column
+        }
+
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val density = LocalDensity.current
+            val rowSpacing = 6.dp
+            // 一行的高度（含间距），量到第一行之后才知道
+            var rowPitchPx by remember { mutableIntStateOf(0) }
+            // 正在播放的歌要能滚到最上面：它后面的歌不够一屏时，在列表底部补上空白
+            val bottomSpace = if (rowPitchPx == 0 || currentPosition < 0) 0.dp else with(density) {
+                (constraints.maxHeight - (rows.size - currentPosition) * rowPitchPx).coerceAtLeast(0).toDp()
+            }
+
+            // 正在播放的歌永远在最上面：打开队列时直接滚过去，换歌后（自动下一首、点了别的歌）平滑滚过去；
+            // 用户正在滑动或拖动排序时不打扰
+            val currentRows by rememberUpdatedState(rows)
+            var scrolledToCurrent by remember { mutableStateOf(false) }
+            LaunchedEffect(currentItemId, rowPitchPx > 0) {
+                if (rowPitchPx == 0) return@LaunchedEffect
+                val position = currentRows.indexOfFirst { it.id == currentItemId }
+                if (position < 0) return@LaunchedEffect
+                if (!scrolledToCurrent) {
+                    lazyListState.scrollToItem(position)
+                    scrolledToCurrent = true
+                } else if (!lazyListState.isScrollInProgress && !reorderableLazyListState.isAnyItemDragging) {
+                    lazyListState.animateScrollToItem(position)
+                }
+            }
+
+            // 滑到底时加载来源列表后面的歌（热门、喜欢、搜索结果），新歌接在队列最后
+            val canLoadMore = loadMoreState == QueueLoadMoreState.Idle
+            LaunchedEffect(lazyListState, canLoadMore, rows.size) {
+                if (!canLoadMore) return@LaunchedEffect
+                snapshotFlow {
+                    val lastVisible = lazyListState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: -1
+                    lastVisible >= rows.size - 3
+                }.first { it }
+                onLoadMore()
+            }
+
             LazyColumn(
                 state = lazyListState,
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                contentPadding = PaddingValues(bottom = bottomSpace),
+                verticalArrangement = Arrangement.spacedBy(rowSpacing)
             ) {
-                itemsIndexed(queue,
-                    key = { index, song -> queueKeys.getOrNull(index) ?: "${song.songId}-${song.source}-$index" }) { index, song ->
-                    val itemKey = queueKeys.getOrNull(index) ?: "${song.songId}-${song.source}-$index"
+                items(rows, key = { it.id }) { item ->
                     ReorderableItem(
                         reorderableLazyListState,
-                        key = itemKey
+                        key = item.id,
+                        enabled = canReorder
                     ) {
                         QueueSongRow(
-                            song = song,
-                            isCurrent = index == currentIndex,
-                            onClick = { onSongClick(index) },
-                            dragHandleModifier = Modifier.draggableHandle()
+                            item = item,
+                            isCurrent = item.id == currentItemId,
+                            showDragHandle = canReorder,
+                            onClick = {
+                                val index = queue.indexOfFirst { it.id == item.id }
+                                if (index >= 0) onSongClick(index)
+                            },
+                            dragHandleModifier = Modifier.draggableHandle(enabled = canReorder),
+                            modifier = Modifier.onSizeChanged { size ->
+                                if (rowPitchPx == 0) rowPitchPx = size.height + with(density) { rowSpacing.roundToPx() }
+                            }
                         )
                     }
+                }
+
+                when (loadMoreState) {
+                    QueueLoadMoreState.Loading -> item(key = "queue_footer") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                color = Color.White.copy(alpha = 0.72f),
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+
+                    QueueLoadMoreState.Failed -> item(key = "queue_footer") {
+                        Text(
+                            text = "加载失败，点击重试",
+                            color = Color.White.copy(alpha = 0.62f),
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable(onClick = onLoadMore)
+                                .padding(vertical = 14.dp)
+                        )
+                    }
+
+                    QueueLoadMoreState.EndReached -> item(key = "queue_footer") {
+                        Text(
+                            text = "已经到底了",
+                            color = Color.White.copy(alpha = 0.45f),
+                            fontSize = 13.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 14.dp)
+                        )
+                    }
+
+                    QueueLoadMoreState.Idle,
+                    QueueLoadMoreState.Unsupported -> Unit
                 }
             }
         }
@@ -1307,13 +1443,15 @@ private fun QueuePanel(
 
 @Composable
 private fun QueueSongRow(
-    song: Song,
+    item: QueueItem,
     isCurrent: Boolean,
+    showDragHandle: Boolean,
     onClick: () -> Unit,
-    dragHandleModifier: Modifier = Modifier
+    dragHandleModifier: Modifier = Modifier,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(
@@ -1325,7 +1463,7 @@ private fun QueueSongRow(
     ) {
         Image(
             painter = rememberAsyncImagePainter(
-                model = song.cover,
+                model = item.artworkUri ?: item.song.cover,
                 placeholder = painterResource(R.drawable.default_cover),
                 error = painterResource(R.drawable.default_cover)
             ),
@@ -1339,7 +1477,7 @@ private fun QueueSongRow(
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = song.songTitle,
+                text = item.song.songTitle,
                 color = Color.White,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -1350,7 +1488,7 @@ private fun QueueSongRow(
             Spacer(modifier = Modifier.height(3.dp))
 
             Text(
-                text = song.singer,
+                text = item.song.singer,
                 color = Color.White.copy(alpha = 0.58f),
                 fontSize = 13.sp,
                 maxLines = 1,
@@ -1358,14 +1496,16 @@ private fun QueueSongRow(
             )
         }
 
-        Icon(
-            painter = painterResource(R.drawable.list_ul_solid_full),
-            contentDescription = null,
-            tint = Color.White.copy(alpha = if (isCurrent) 0.78f else 0.36f),
-            modifier = Modifier.size(24.dp)
-                .size(24.dp)
-                .then(dragHandleModifier)
-        )
+        if (showDragHandle) {
+            Icon(
+                painter = painterResource(R.drawable.list_ul_solid_full),
+                contentDescription = "拖动排序",
+                tint = Color.White.copy(alpha = if (isCurrent) 0.78f else 0.36f),
+                modifier = Modifier
+                    .size(24.dp)
+                    .then(dragHandleModifier)
+            )
+        }
     }
 }
 

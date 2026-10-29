@@ -4,14 +4,12 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.activity.compose.BackHandler
-import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -27,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -66,7 +63,6 @@ import com.example.musicapplication.utils.LocalAudioMetaDataReader
  * 3. 悬浮的玻璃底栏（Tab 胶囊 + 搜索按钮），只在 Tab 页显示；
  * 4. 播放器：迷你玻璃胶囊 ↔ 全屏，迷你状态的位置由底栏状态决定。
  */
-@OptIn(UnstableApi::class)
 @Composable
 fun MainPage(
     mainPageViewModel: MainPageViewModel,
@@ -105,9 +101,7 @@ fun MainPage(
             )
         }
 
-        playerViewModel.playSong(
-            song
-        )
+        playerViewModel.playSong(song)
         onExternalAudioConsumed()
     }
 
@@ -131,7 +125,7 @@ fun MainPage(
     val isPlayerExpanded by remember { derivedStateOf { playerProgress.floatValue > 0.03f } }
     val isPlayerFullScreen by remember { derivedStateOf { playerProgress.floatValue > 0.98f } }
 
-    val pageBackground = LocalMusicThemeColors.current.bgBottom
+    val pageBackground = LocalMusicThemeColors.current.background
     val navigationBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     CompositionLocalProvider(LocalMainBottomInset provides barState.contentInset(navigationBarInset)) {
@@ -151,13 +145,9 @@ fun MainPage(
             ) {
                 composable(RouterConfig.HOME) {
                     HomeScreen(
-                        modifier = Modifier.statusBarsPadding(),
                         context = context,
                         onSongClick = { listKey, songs, index ->
                             playerViewModel.playQueueSong(listKey, songs, index)
-                        },
-                        onSearchClick = {
-                            navController.navigate(RouterConfig.SEARCH)
                         }
                     )
                 }
@@ -166,7 +156,7 @@ fun MainPage(
                         onBack = { navController.popBackStack() },
                         onSongClick = { listKey, songs, index ->
                             if (listKey == null) {
-                                playerViewModel.playQueueSong(songs, index)
+                                playerViewModel.playQueueSong(songs, index, sourceTitle = "最近搜索")
                             } else {
                                 playerViewModel.playQueueSong(listKey, songs, index)
                             }
@@ -175,7 +165,6 @@ fun MainPage(
                 }
                 composable(RouterConfig.PROFILE) {
                     ProfileScreen(
-                        modifier = Modifier.statusBarsPadding(),
                         onClickAccount = {
                             navController.navigate(ProfileRoute.PROFILE_ACCOUNT)
                         },
@@ -208,7 +197,7 @@ fun MainPage(
                     DownloadMusicScreen(
                         onBack = { navController.popBackStack() },
                         onSongClick = { songs, index ->
-                            playerViewModel.playQueueSong(songs, index)
+                            playerViewModel.playQueueSong(songs, index, sourceTitle = "下载的歌曲")
                         }
                     )
                 }
@@ -224,7 +213,7 @@ fun MainPage(
                     RecentMusicScreen(
                         onBack = { navController.popBackStack() },
                         onSongClick = { songs, index ->
-                            playerViewModel.playQueueSong(songs, index)
+                            playerViewModel.playQueueSong(songs, index, sourceTitle = "最近播放")
                         }
                     )
                 }

@@ -56,9 +56,11 @@ class MainActivity : ComponentActivity() {
         setContent {
 
             val themePreset by themeViewModel.themePreset.collectAsStateWithLifecycle()
+            val backgroundImage by themeViewModel.backgroundImage.collectAsStateWithLifecycle()
 
             MusicApplicationTheme(
-                themePreset = themePreset
+                themePreset = themePreset,
+                backgroundImage = backgroundImage
             ) {
                 AppNavigation(
                     context = mContext,

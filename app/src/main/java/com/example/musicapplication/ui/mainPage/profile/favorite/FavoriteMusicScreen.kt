@@ -9,18 +9,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
@@ -29,9 +25,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.pulltorefresh.PullToRefreshState
-import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -41,8 +34,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.example.musicapplication.R
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -69,7 +60,6 @@ fun FavoriteMusicScreen(
 ) {
     val context = LocalContext.current
     val songListUiState by favoriteMusicViewModel.songListUiState.collectAsState()
-    val pullToRefreshState = rememberPullToRefreshState()
     val listState = rememberLazyListState()
 
     LaunchedEffect(songListUiState.errorMsg) {
@@ -80,7 +70,8 @@ fun FavoriteMusicScreen(
 
     LaunchedEffect(listState, songListUiState.songs) {
         snapshotFlow {
-            val triggerIndex = (songListUiState.songs.lastIndex - 2).coerceAtLeast(0)
+            // 离底部还有 6 首时就开始加载下一页，滑到底之前通常已经加载好了
+            val triggerIndex = (songListUiState.songs.lastIndex - 6).coerceAtLeast(0)
             val triggerSongId = songListUiState.songs.getOrNull(triggerIndex)?.songId
                 ?: return@snapshotFlow false
             val triggerKey = "loved_$triggerSongId"
@@ -96,142 +87,81 @@ fun FavoriteMusicScreen(
             }
     }
 
-    PullToRefreshBox(
-        isRefreshing = songListUiState.isRefreshing,
+    MusicCollectionScaffold(
+        title = "喜欢的歌曲",
+        tag = "喜欢的音乐会显示在这里",
+        emptyTitle = "还没有喜欢的歌曲",
+        emptyDescription = "在播放页点击喜欢后，歌曲会出现在这里。",
+        icon = Icons.Default.Favorite,
+        onBack = onBack,
+        modifier = modifier.fillMaxSize(),
+        listState = listState,
         onRefresh = {
             favoriteMusicViewModel.refreshLovedSongs(isPullToRefresh = true)
         },
-        modifier = modifier.fillMaxSize(),
-        state = pullToRefreshState,
-        indicator = {
-            FavoriteRefreshIndicator(
-                state = pullToRefreshState,
-                isRefreshing = songListUiState.isRefreshing,
-                modifier = Modifier.align(Alignment.TopCenter)
-            )
-        }
-    ) {
-        MusicCollectionScaffold(
-            title = "喜欢的歌曲",
-            tag = "喜欢的音乐会显示在这里",
-            emptyTitle = "还没有喜欢的歌曲",
-            emptyDescription = "在播放页点击喜欢后，歌曲会出现在这里。",
-            icon = Icons.Default.Favorite,
-            onBack = onBack,
-            modifier = Modifier.fillMaxSize(),
-            listState = listState,
-            playAllEnabled = songListUiState.songs.isNotEmpty(),
-            onPlayAllClick = {
-                if (songListUiState.songs.isNotEmpty()) {
-                    onSongClick(SongListKey.Loved, songListUiState.songs, 0)
-                }
-            },
-            content = if (songListUiState.songs.isEmpty()) {
-                null
-            } else {
-                { _ ->
-                    items(
-                        items = songListUiState.songs,
-                        key = { "loved_${it.songId}" }
-                    ) { song ->
-                        FavoriteSongRow(
-                            song = song,
-                            onClick = {
-                                onSongClick(
-                                    SongListKey.Loved,
-                                    songListUiState.songs,
-                                    songListUiState.songs.indexOf(song)
-                                )
-                            },
-                            onFavoriteClick = {
-                                favoriteMusicViewModel.doFavoriteEvent(songListUiState.songs.indexOf(song))
-                                favoriteMusicViewModel.refreshLovedSongs()
-                            }
-                        )
-                    }
-
-                    if (songListUiState.isLoading && songListUiState.songs.isNotEmpty()) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 14.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(24.dp),
-                                    color = LocalMusicThemeColors.current.primary,
-                                    strokeWidth = 2.5.dp
-                                )
-                            }
+        isRefreshing = songListUiState.isRefreshing,
+        refreshError = songListUiState.refreshError,
+        playAllEnabled = songListUiState.songs.isNotEmpty(),
+        onPlayAllClick = {
+            if (songListUiState.songs.isNotEmpty()) {
+                onSongClick(SongListKey.Loved, songListUiState.songs, 0)
+            }
+        },
+        content = if (songListUiState.songs.isEmpty()) {
+            null
+        } else {
+            { _ ->
+                items(
+                    items = songListUiState.songs,
+                    key = { "loved_${it.songId}" }
+                ) { song ->
+                    FavoriteSongRow(
+                        song = song,
+                        onClick = {
+                            onSongClick(
+                                SongListKey.Loved,
+                                songListUiState.songs,
+                                songListUiState.songs.indexOf(song)
+                            )
+                        },
+                        onFavoriteClick = {
+                            favoriteMusicViewModel.doFavoriteEvent(songListUiState.songs.indexOf(song))
+                            favoriteMusicViewModel.refreshLovedSongs()
                         }
-                    } else if (songListUiState.isEndReached && songListUiState.songs.isNotEmpty()) {
-                        item {
-                            Text(
-                                text = "已经到底了",
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 16.dp),
-                                textAlign = TextAlign.Center,
-                                color = LocalMusicThemeColors.current.textSecondary,
-                                fontSize = 13.sp
+                    )
+                }
+
+                if (songListUiState.isLoading && songListUiState.songs.isNotEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 14.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = LocalMusicThemeColors.current.primary,
+                                strokeWidth = 2.5.dp
                             )
                         }
                     }
+                } else if (songListUiState.isEndReached && songListUiState.songs.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "已经到底了",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            textAlign = TextAlign.Center,
+                            color = LocalMusicThemeColors.current.textSecondary,
+                            fontSize = 13.sp
+                        )
+                    }
                 }
             }
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FavoriteRefreshIndicator(
-    state: PullToRefreshState,
-    isRefreshing: Boolean,
-    modifier: Modifier = Modifier
-) {
-    val density = LocalDensity.current
-    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val offsetY = with(density) {
-        val hiddenY = -(statusBarTop + 42.dp).toPx()
-        val shownY = (statusBarTop + 18.dp).toPx()
-        val progress = state.distanceFraction.coerceIn(0f, 1f)
-
-        if (isRefreshing) {
-            shownY
-        } else {
-            hiddenY + (shownY - hiddenY) * progress
         }
-    }
-
-    Box(
-        modifier = modifier
-            .graphicsLayer {
-                translationY = offsetY
-                alpha = if (isRefreshing || state.distanceFraction > 0f) 1f else 0f
-            }
-            .size(36.dp)
-            .clip(CircleShape)
-            .background(LocalMusicThemeColors.current.surface)
-            .border(1.dp, LocalMusicThemeColors.current.border, CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        if (isRefreshing) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(26.dp),
-                color = LocalMusicThemeColors.current.primary,
-                strokeWidth = 2.5.dp
-            )
-        } else {
-            CircularProgressIndicator(
-                progress = { state.distanceFraction.coerceIn(0f, 1f) },
-                color = LocalMusicThemeColors.current.primary,
-                strokeWidth = 3.dp,
-                modifier = Modifier.size(20.dp)
-            )
-        }
-    }
+    )
 }
 
 @Composable

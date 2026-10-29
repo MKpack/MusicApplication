@@ -1,11 +1,11 @@
 package com.example.musicapplication.domain.model
 
 data class Song(
-    var songId: Long,
-    var songTitle: String,
-    var singer: String,
-    var isLoved: Boolean,
-    var cover: String?,
-    var lyric: String? = null,
-    var source: MusicSource?
+    val songId: Long,
+    val songTitle: String,
+    val singer: String,
+    val isLoved: Boolean,
+    val cover: String?,
+    val lyric: String? = null,
+    val source: MusicSource?
 )

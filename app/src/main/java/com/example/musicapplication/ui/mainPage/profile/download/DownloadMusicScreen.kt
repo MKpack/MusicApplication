@@ -12,14 +12,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -27,13 +24,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -45,7 +40,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -56,6 +50,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.musicapplication.R
 import com.example.musicapplication.domain.model.Song
+import com.example.musicapplication.ui.component.GlassIconButton
+import com.example.musicapplication.ui.component.GlassTopBarDefaults
+import com.example.musicapplication.ui.component.GlassTopBarScaffold
+import com.example.musicapplication.ui.component.PageTitle
 import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 
 @Composable
@@ -86,164 +84,110 @@ fun DownloadMusicScreen(
         }
     }
 
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        LocalMusicThemeColors.current.bgTop,
-                        LocalMusicThemeColors.current.bgBottom
-                    )
-                )
-            )
-    ) {
-        val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-        val bottomPadding = 120.dp
-        val itemSpacing = 14.dp
-        val listMinHeight = (
-            maxHeight -
-                statusBarTop -
-                8.dp -
-                50.dp -
-                58.dp -
-                48.dp -
-                itemSpacing * 3 -
-                bottomPadding
-            ).coerceAtLeast(320.dp)
-        val listState = rememberLazyListState()
+    val listState = rememberLazyListState()
+    val title = if (isSelectMode) "已选择 ${selectedSongIds.size} 首" else "下载管理"
 
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 18.dp,
-                end = 18.dp,
-                top = statusBarTop + 8.dp,
-                bottom = bottomPadding
-            ),
-            verticalArrangement = Arrangement.spacedBy(itemSpacing)
-        ) {
-            item {
-                DownloadTopBar(
-                    isSelectMode = isSelectMode,
-                    selectedCount = selectedSongIds.size,
-                    onBack = {
-                        if (isSelectMode) {
-                            exitSelectMode()
-                        } else {
-                            onBack()
-                        }
-                    },
-                    onDelete = {
-                        val ids = selectedSongIds.toList()
-                        if (ids.isNotEmpty()) {
-                            downloadMusicViewModel.deleteDownloadSongs(ids)
-                        }
-                        exitSelectMode()
-                    }
-                )
-            }
-
-            item {
-                DownloadTag()
-            }
-
-            item {
-                PlayAllButton(
-                    enabled = songs.isNotEmpty() && !isSelectMode,
-                    onClick = {
-                        if (songs.isNotEmpty()) {
-                            onSongClick(songs, 0)
-                        }
-                    }
-                )
-            }
-
-            if (songs.isEmpty()) {
-                item {
-                    EmptyDownloadState(modifier = Modifier.height(listMinHeight))
-                }
+    // 返回按钮固定在左上角（选择模式下是退出选择）；选择模式下右上角是删除
+    GlassTopBarScaffold(
+        listState = listState,
+        modifier = modifier,
+        title = title,
+        onBack = {
+            if (isSelectMode) {
+                exitSelectMode()
             } else {
-                itemsIndexed(
-                    items = songs,
-                    key = { _, song -> "download_${song.songId}" }
-                ) { index, song ->
-                    DownloadSongRow(
-                        song = song,
-                        isSelectMode = isSelectMode,
-                        isSelected = selectedSongIds.contains(song.songId),
+                onBack()
+            }
+        },
+        actions = {
+            if (isSelectMode) {
+                val canDelete = selectedSongIds.isNotEmpty()
+                GlassIconButton(
+                    icon = Icons.Rounded.Delete,
+                    contentDescription = "删除",
+                    onClick = {
+                        downloadMusicViewModel.deleteDownloadSongs(selectedSongIds.toList())
+                        exitSelectMode()
+                    },
+                    backdrop = backdrop,
+                    tint = if (canDelete) Color(0xFFFF5148) else LocalMusicThemeColors.current.textSecondary,
+                    enabled = canDelete
+                )
+            }
+        }
+    ) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val statusBarTop = GlassTopBarDefaults.statusBarHeight
+            val bottomPadding = 120.dp
+            val itemSpacing = 14.dp
+            val listMinHeight = (
+                maxHeight -
+                    statusBarTop -
+                    GlassTopBarDefaults.RowHeight -
+                    58.dp -
+                    48.dp -
+                    itemSpacing * 3 -
+                    bottomPadding
+                ).coerceAtLeast(320.dp)
+
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = GlassTopBarDefaults.HorizontalPadding,
+                    end = GlassTopBarDefaults.HorizontalPadding,
+                    // 标题和顶栏的返回按钮在同一行
+                    top = statusBarTop,
+                    bottom = bottomPadding
+                ),
+                verticalArrangement = Arrangement.spacedBy(itemSpacing)
+            ) {
+                item {
+                    PageTitle(text = title)
+                }
+
+                item {
+                    DownloadTag()
+                }
+
+                item {
+                    PlayAllButton(
+                        enabled = songs.isNotEmpty() && !isSelectMode,
                         onClick = {
-                            if (isSelectMode) {
-                                toggleSelection(song.songId)
-                            } else {
-                                onSongClick(songs, index)
+                            if (songs.isNotEmpty()) {
+                                onSongClick(songs, 0)
                             }
-                        },
-                        onLongClick = {
-                            isSelectMode = true
-                            selectedSongIds.add(song.songId)
                         }
                     )
                 }
-            }
-        }
-    }
-}
 
-@Composable
-private fun DownloadTopBar(
-    isSelectMode: Boolean,
-    selectedCount: Int,
-    onBack: () -> Unit,
-    onDelete: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        IconButton(
-            onClick = onBack,
-            modifier = Modifier.size(42.dp)
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = null,
-                tint = LocalMusicThemeColors.current.textPrimary,
-                modifier = Modifier.size(25.dp)
-            )
-        }
-
-        Text(
-            text = if (isSelectMode) "已选择 $selectedCount 首" else "下载管理",
-            color = LocalMusicThemeColors.current.textPrimary,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = 4.dp)
-        )
-
-        if (isSelectMode) {
-            IconButton(
-                onClick = onDelete,
-                enabled = selectedCount > 0,
-                modifier = Modifier.size(42.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = null,
-                    tint = if (selectedCount > 0) {
-                        Color(0xFFFF5148)
-                    } else {
-                        LocalMusicThemeColors.current.textSecondary
-                    },
-                    modifier = Modifier.size(25.dp)
-                )
+                if (songs.isEmpty()) {
+                    item {
+                        EmptyDownloadState(modifier = Modifier.height(listMinHeight))
+                    }
+                } else {
+                    itemsIndexed(
+                        items = songs,
+                        key = { _, song -> "download_${song.songId}" }
+                    ) { index, song ->
+                        DownloadSongRow(
+                            song = song,
+                            isSelectMode = isSelectMode,
+                            isSelected = selectedSongIds.contains(song.songId),
+                            onClick = {
+                                if (isSelectMode) {
+                                    toggleSelection(song.songId)
+                                } else {
+                                    onSongClick(songs, index)
+                                }
+                            },
+                            onLongClick = {
+                                isSelectMode = true
+                                selectedSongIds.add(song.songId)
+                            }
+                        )
+                    }
+                }
             }
         }
     }

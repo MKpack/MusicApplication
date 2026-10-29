@@ -9,6 +9,7 @@ import com.example.musicapplication.data.repository.SongRepository
 import com.example.musicapplication.domain.model.AppNotification
 import com.example.musicapplication.domain.model.Song
 import com.example.musicapplication.domain.model.SongListKey
+import com.example.musicapplication.ui.component.withMinRefreshDuration
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,7 +21,9 @@ data class SongListUiState(
     val errorMsg: String? = null,
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
-    val isEndReached: Boolean = false
+    val isEndReached: Boolean = false,
+    // 下拉刷新失败的原因：显示在下拉露出来的位置，不弹 Toast
+    val refreshError: String? = null
 )
 
 data class HomeNotificationUiState(
@@ -131,10 +134,15 @@ class HomeScreenViewModel @Inject constructor(
                 isLoading = !isPullToRefresh,
                 isRefreshing = isPullToRefresh,
                 errorMsg = null,
-                isEndReached = false
+                isEndReached = false,
+                refreshError = null
             )
 
-            val result = songRepository.refreshSongs(SongListKey.Hot)
+            val result = if (isPullToRefresh) {
+                withMinRefreshDuration { songRepository.refreshSongs(SongListKey.Hot) }
+            } else {
+                songRepository.refreshSongs(SongListKey.Hot)
+            }
 
             when(result) {
                 is RepositoryWorkResult.Success -> {
@@ -148,7 +156,8 @@ class HomeScreenViewModel @Inject constructor(
                     _songListUiState.value = _songListUiState.value.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        errorMsg = result.message
+                        errorMsg = if (isPullToRefresh) null else result.message,
+                        refreshError = if (isPullToRefresh) result.message else null
                     )
                 }
             }

@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.example.musicapplication.data.common.RepositoryWorkResult
 import com.example.musicapplication.data.repository.ProfileRepository
 import com.example.musicapplication.data.repository.UserStatRepository
+import com.example.musicapplication.ui.component.withMinRefreshDuration
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,7 +22,9 @@ data class ProfileUIState(
     val avatarUrl: String? = null,
     val playCount: Long = 0L,
     val favoriteCount: Long = 0L,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    // 下拉刷新失败的原因：显示在下拉露出来的位置，不弹 Toast
+    val refreshError: String? = null
 )
 
 @HiltViewModel
@@ -118,19 +121,22 @@ class ProfileViewModel @Inject constructor(
 
             _uiState.value = state.copy(
                 isRefreshing = true,
-                errorMessage = null
+                errorMessage = null,
+                refreshError = null
             )
 
-            val profileResult = profileRepository.getUserProfile()
-            val statResult = userStatRepository.getUserStat()
+            val (profileResult, statResult) = withMinRefreshDuration {
+                profileRepository.getUserProfile() to userStatRepository.getUserStat()
+            }
             val failure = listOf(profileResult, statResult)
                 .filterIsInstance<RepositoryWorkResult.Failure>()
                 .firstOrNull()
 
+            // 只有下拉会调用这里，失败原因显示在下拉的位置
             _uiState.value = _uiState.value.copy(
                 isRefreshing = false,
                 isLoading = false,
-                errorMessage = failure?.message
+                refreshError = failure?.message
             )
 
             failure?.let {

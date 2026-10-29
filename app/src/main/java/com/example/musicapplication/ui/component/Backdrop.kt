@@ -80,6 +80,7 @@ internal fun glassBackdropEffect(sigmaPx: Float, saturation: Float = 1.7f): Rend
     ).asComposeRenderEffect()
 }
 
+// 清单项
 private data class BackdropSourceElement(val backdrop: Backdrop) : ModifierNodeElement<BackdropSourceNode>() {
     override fun create() = BackdropSourceNode(backdrop)
 
@@ -92,6 +93,7 @@ private data class BackdropSourceElement(val backdrop: Backdrop) : ModifierNodeE
     }
 }
 
+// 工人
 private class BackdropSourceNode(backdrop: Backdrop) :
     Modifier.Node(), DrawModifierNode, GlobalPositionAwareModifierNode {
 

@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.wrapContentWidth
@@ -33,6 +34,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,11 +48,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.constrainHeight
+import androidx.compose.ui.unit.constrainWidth
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.musicapplication.ui.component.Backdrop
@@ -88,7 +95,8 @@ fun MainBottomBar(
     tabs: List<MainTab> = MainTab.entries,
 ) {
     val navigationBarInset = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
-    val collapse = state.collapseFraction.coerceIn(0f, 1f)
+    // 收起进度在动画里每帧都变，只在布局、绘制阶段读：动画时只重新排版和绘制，底栏不用每帧重组
+    val collapse = remember(state) { { state.collapseFraction.coerceIn(0f, 1f) } }
 
     BoxWithConstraints(
         modifier = modifier
@@ -106,7 +114,7 @@ fun MainBottomBar(
             .padding(horizontal = BottomBarMetrics.SideMargin)
     ) {
         val expandedTabWidth = maxWidth - BottomBarMetrics.TabBarHeight - BottomBarMetrics.Gap
-        val rowHeight = lerpDp(BottomBarMetrics.TabBarHeight, BottomBarMetrics.CollapsedSize, collapse)
+        val collapsedSize = DpSize(BottomBarMetrics.CollapsedSize, BottomBarMetrics.CollapsedSize)
 
         TabCapsule(
             tabs = tabs,
@@ -118,7 +126,7 @@ fun MainBottomBar(
             backdrop = backdrop,
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .size(width = lerpDp(expandedTabWidth, BottomBarMetrics.CollapsedSize, collapse), height = rowHeight)
+                .collapsingSize(collapse, DpSize(expandedTabWidth, BottomBarMetrics.TabBarHeight), collapsedSize)
         )
         GlassIconButton(
             icon = Icons.Rounded.Search,
@@ -128,10 +136,20 @@ fun MainBottomBar(
             iconSize = 26.dp,
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .size(rowHeight)
+                .collapsingSize(collapse, DpSize(BottomBarMetrics.TabBarHeight, BottomBarMetrics.TabBarHeight), collapsedSize)
         )
     }
 }
+
+/** 按收起进度在展开、收起两个尺寸之间插值。进度在测量阶段读，动画时只重新测量，不触发重组 */
+private fun Modifier.collapsingSize(collapse: () -> Float, expanded: DpSize, collapsed: DpSize): Modifier =
+    layout { measurable, constraints ->
+        val fraction = collapse()
+        val width = constraints.constrainWidth(lerpDp(expanded.width, collapsed.width, fraction).roundToPx())
+        val height = constraints.constrainHeight(lerpDp(expanded.height, collapsed.height, fraction).roundToPx())
+        val placeable = measurable.measure(Constraints.fixed(width, height))
+        layout(width, height) { placeable.place(0, 0) }
+    }
 
 /**
  * Tab 胶囊。展开时是一排 Tab 加一块可以拖动的高光；收起时缩成小圆，只显示当前页的图标，点一下恢复展开。
@@ -141,7 +159,7 @@ fun MainBottomBar(
 private fun TabCapsule(
     tabs: List<MainTab>,
     selectedTab: MainTab,
-    collapse: Float,
+    collapse: () -> Float,
     expandedWidth: Dp,
     onTabSelected: (MainTab) -> Unit,
     onExpand: () -> Unit,
@@ -150,8 +168,9 @@ private fun TabCapsule(
 ) {
     val colors = LocalMusicThemeColors.current
     val neutral = colors.neutral
-    val itemsAlpha = 1f - smoothProgress(collapse, 0f, 0.5f)
-    val orbAlpha = smoothProgress(collapse, 0.5f, 1f)
+    // 收起到一半时 Tab 刚好淡完、小圆开始淡入，只在这时重组一次；透明度本身在绘制阶段读
+    val showItems by remember(collapse) { derivedStateOf { collapse() < 0.5f } }
+    val showOrb by remember(collapse) { derivedStateOf { collapse() > 0.5f } }
 
     Box(
         modifier = modifier
@@ -160,24 +179,25 @@ private fun TabCapsule(
             .liquidGlass(CircleShape, neutral.glass, neutral, backdrop),
         contentAlignment = Alignment.CenterStart
     ) {
-        if (itemsAlpha > 0f) {
+        if (showItems) {
             TabItems(
                 tabs = tabs,
                 selectedIndex = tabs.indexOf(selectedTab).coerceAtLeast(0),
                 onTabSelected = onTabSelected,
                 modifier = Modifier
-                    // 收起过程中仍按展开时的宽度排版，超出的部分被胶囊裁掉，图标不会被挤扁
+                    // 收起过程中仍按展开时的大小排版，超出的部分被胶囊裁掉：图标不会被挤扁，
+                    // 尺寸不变，里面的 BoxWithConstraints 也不用每帧重新组合
                     .wrapContentWidth(Alignment.Start, unbounded = true)
                     .requiredWidth(expandedWidth)
-                    .fillMaxHeight()
-                    .graphicsLayer { alpha = itemsAlpha }
+                    .requiredHeight(BottomBarMetrics.TabBarHeight)
+                    .graphicsLayer { alpha = 1f - smoothProgress(collapse(), 0f, 0.5f) }
             )
         }
-        if (orbAlpha > 0f) {
+        if (showOrb) {
             Box(
                 modifier = Modifier
                     .matchParentSize()
-                    .graphicsLayer { alpha = orbAlpha }
+                    .graphicsLayer { alpha = smoothProgress(collapse(), 0.5f, 1f) }
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,

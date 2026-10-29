@@ -14,14 +14,11 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -30,7 +27,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
@@ -48,7 +44,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -63,6 +58,8 @@ import coil.compose.rememberAsyncImagePainter
 import com.example.musicapplication.R
 import com.example.musicapplication.domain.model.Song
 import com.example.musicapplication.domain.model.SongListKey
+import com.example.musicapplication.ui.component.GlassTopBarDefaults
+import com.example.musicapplication.ui.component.GlassTopBarScaffold
 import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filter
@@ -90,7 +87,8 @@ fun SearchScreen(
         snapshotFlow {
             if (uiState.keyword.isBlank()) return@snapshotFlow false
 
-            val triggerIndex = (uiState.songs.lastIndex - 2).coerceAtLeast(0)
+            // 离底部还有 6 首时就开始加载下一页，滑到底之前通常已经加载好了
+            val triggerIndex = (uiState.songs.lastIndex - 6).coerceAtLeast(0)
             val triggerSongId = uiState.songs.getOrNull(triggerIndex)?.songId
                 ?: return@snapshotFlow false
             val triggerKey = "search_$triggerSongId"
@@ -106,192 +104,165 @@ fun SearchScreen(
             }
     }
 
-    LazyColumn(
-        state = listState,
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        LocalMusicThemeColors.current.bgTop,
-                        LocalMusicThemeColors.current.bgBottom
-                    )
-                )
-            ),
-        contentPadding = PaddingValues(
-            start = 18.dp,
-            end = 18.dp,
-            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp,
-            bottom = 132.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
-    ) {
-        item {
-            SearchTopBar(
+    // 返回按钮和搜索框固定在顶栏里，搜索结果从它下面滑过
+    GlassTopBarScaffold(
+        listState = listState,
+        modifier = modifier,
+        onBack = onBack,
+        pinnedContent = {
+            SearchField(
                 keyword = uiState.keyword,
                 onKeywordChange = searchViewModel::onKeywordChange,
-                onBack = onBack,
-                onClear = { searchViewModel.onKeywordChange("") },
-                modifier = Modifier.focusRequester(focusRequester)
+                modifier = Modifier
+                    .weight(1f)
+                    .focusRequester(focusRequester)
             )
         }
+    ) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = 18.dp,
+                end = 18.dp,
+                // 内容从顶栏（状态栏 + 搜索框那一行）下面开始
+                top = GlassTopBarDefaults.statusBarHeight + GlassTopBarDefaults.RowHeight + 16.dp,
+                bottom = 132.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
+            if (uiState.keyword.isBlank()) {
+                if (uiState.recentSongs.isNotEmpty()) {
+                    item {
+                        SearchSectionTitle(title = "最近搜索")
+                    }
 
-        if (uiState.keyword.isBlank()) {
-            if (uiState.recentSongs.isNotEmpty()) {
-                item {
-                    SearchSectionTitle(title = "最近搜索")
+                    itemsIndexed(
+                        items = uiState.recentSongs,
+                        key = { _, song -> "recent_${song.songId}" }
+                    ) { index, song ->
+                        SearchSongRow(
+                            song = song,
+                            onClick = {
+                                searchViewModel.recordSearchSong(song)
+                                onSongClick(null, uiState.recentSongs, index)
+                            },
+                            onFavoriteClick = {
+                                searchViewModel.doFavoriteEvent(song)
+                            }
+                        )
+                    }
                 }
-
+            } else if (uiState.isLoading && uiState.songs.isEmpty()) {
+                item {
+                    SearchLoading()
+                }
+            } else if (uiState.hasSearched && uiState.songs.isEmpty()) {
+                item {
+                    SearchEmpty(keyword = uiState.keyword)
+                }
+            } else {
                 itemsIndexed(
-                    items = uiState.recentSongs,
-                    key = { _, song -> "recent_${song.songId}" }
+                    items = uiState.songs,
+                    key = { _, song -> "search_${song.songId}" }
                 ) { index, song ->
                     SearchSongRow(
                         song = song,
                         onClick = {
                             searchViewModel.recordSearchSong(song)
-                            onSongClick(null, uiState.recentSongs, index)
+                            onSongClick(SongListKey.Search(uiState.keyword.trim()), uiState.songs, index)
                         },
                         onFavoriteClick = {
                             searchViewModel.doFavoriteEvent(song)
                         }
                     )
                 }
-            }
-        } else if (uiState.isLoading && uiState.songs.isEmpty()) {
-            item {
-                SearchLoading()
-            }
-        } else if (uiState.hasSearched && uiState.songs.isEmpty()) {
-            item {
-                SearchEmpty(keyword = uiState.keyword)
-            }
-        } else {
-            itemsIndexed(
-                items = uiState.songs,
-                key = { _, song -> "search_${song.songId}" }
-            ) { index, song ->
-                SearchSongRow(
-                    song = song,
-                    onClick = {
-                        searchViewModel.recordSearchSong(song)
-                        onSongClick(SongListKey.Search(uiState.keyword.trim()), uiState.songs, index)
-                    },
-                    onFavoriteClick = {
-                        searchViewModel.doFavoriteEvent(song)
-                    }
-                )
-            }
 
-            if (uiState.isLoading && uiState.songs.isNotEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 14.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = LocalMusicThemeColors.current.primary,
-                            strokeWidth = 2.5.dp
+                if (uiState.isLoading && uiState.songs.isNotEmpty()) {
+                    item {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 14.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = LocalMusicThemeColors.current.primary,
+                                strokeWidth = 2.5.dp
+                            )
+                        }
+                    }
+                } else if (uiState.isEndReached && uiState.songs.isNotEmpty()) {
+                    item {
+                        Text(
+                            text = "已经到底了",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 16.dp),
+                            textAlign = TextAlign.Center,
+                            color = LocalMusicThemeColors.current.textSecondary,
+                            fontSize = 13.sp
                         )
                     }
-                }
-            } else if (uiState.isEndReached && uiState.songs.isNotEmpty()) {
-                item {
-                    Text(
-                        text = "已经到底了",
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        textAlign = TextAlign.Center,
-                        color = LocalMusicThemeColors.current.textSecondary,
-                        fontSize = 13.sp
-                    )
                 }
             }
         }
     }
 }
 
+/** 顶栏里的搜索框，和左边的返回按钮一样高 */
 @Composable
-private fun SearchTopBar(
+private fun SearchField(
     keyword: String,
     onKeywordChange: (String) -> Unit,
-    onBack: () -> Unit,
-    onClear: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(52.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(42.dp)
-                .clip(CircleShape)
-                .clickable(onClick = onBack),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = null,
-                tint = LocalMusicThemeColors.current.textPrimary,
-                modifier = Modifier.size(25.dp)
-            )
-        }
+    BasicTextField(
+        value = keyword,
+        onValueChange = onKeywordChange,
+        singleLine = true,
+        textStyle = androidx.compose.ui.text.TextStyle(
+            color = LocalMusicThemeColors.current.textPrimary,
+            fontSize = 15.sp
+        ),
+        modifier = modifier,
+        decorationBox = { innerTextField ->
+            Row(
+                modifier = Modifier
+                    .height(44.dp)
+                    .clip(CircleShape)
+                    .background(LocalMusicThemeColors.current.surface)
+                    .border(1.dp, LocalMusicThemeColors.current.border, CircleShape)
+                    .padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Search,
+                    contentDescription = null,
+                    tint = LocalMusicThemeColors.current.iconMuted,
+                    modifier = Modifier.size(20.dp)
+                )
 
-        Spacer(modifier = Modifier.size(8.dp))
+                Spacer(Modifier.width(10.dp))
 
-        BasicTextField(
-            value = keyword,
-            onValueChange = onKeywordChange,
-            singleLine = true,
-            textStyle = androidx.compose.ui.text.TextStyle(
-                color = LocalMusicThemeColors.current.textPrimary,
-                fontSize = 15.sp
-            ),
-            modifier = Modifier.weight(1f),
-            decorationBox = { innerTextField ->
-                Row(
-                    modifier = Modifier
-                        .height(52.dp)
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(LocalMusicThemeColors.current.surface)
-                        .border(1.dp, LocalMusicThemeColors.current.border, RoundedCornerShape(18.dp))
-                        .padding(horizontal = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Box(Modifier
+                    .weight(1f)
+                    .height(27.dp),
+                    contentAlignment = Alignment.CenterStart
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Search,
-                        contentDescription = null,
-                        tint = LocalMusicThemeColors.current.iconMuted,
-                        modifier = Modifier.size(20.dp)
-                    )
-
-                    Spacer(Modifier.width(10.dp))
-
-                    Box(Modifier
-                        .weight(1f)
-                        .height(27.dp),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        if (keyword.isBlank()) {
-                            Text(
-                                text = "搜索歌曲、歌手、歌单",
-                                color = LocalMusicThemeColors.current.textHint,
-                                fontSize = 15.sp
-                            )
-                        }
-                        innerTextField()
+                    if (keyword.isBlank()) {
+                        Text(
+                            text = "搜索歌曲、歌手、歌单",
+                            color = LocalMusicThemeColors.current.textHint,
+                            fontSize = 15.sp
+                        )
                     }
+                    innerTextField()
                 }
             }
-        )
-    }
+        }
+    )
 }
 
 @Composable

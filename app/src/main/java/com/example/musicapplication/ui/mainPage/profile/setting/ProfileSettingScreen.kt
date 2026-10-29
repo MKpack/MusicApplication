@@ -10,19 +10,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.DeleteSweep
 import androidx.compose.material.icons.filled.History
@@ -42,7 +39,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -50,6 +46,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.musicapplication.ui.component.GlassTopBarDefaults
+import com.example.musicapplication.ui.component.GlassTopBarScaffold
+import com.example.musicapplication.ui.component.PageTitle
 import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 
 @Composable
@@ -69,28 +68,30 @@ fun ProfileSettingScreen(
         }
     }
 
-    LazyColumn(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        LocalMusicThemeColors.current.bgTop,
-                        LocalMusicThemeColors.current.bgBottom
-                    )
-                )
-            ),
-        contentPadding = PaddingValues(
-            start = 18.dp,
-            end = 18.dp,
-            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 8.dp,
-            bottom = 140.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+    val listState = rememberLazyListState()
+
+    // 返回按钮固定在左上角；标题在列表第一项，滚走后顶栏正中显示小标题
+    GlassTopBarScaffold(
+        listState = listState,
+        modifier = modifier,
+        title = "设置",
+        onBack = onBack
     ) {
-        item {
-            SettingTopBar(onBack = onBack)
-        }
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                start = GlassTopBarDefaults.HorizontalPadding,
+                end = GlassTopBarDefaults.HorizontalPadding,
+                // 标题和顶栏的返回按钮在同一行
+                top = GlassTopBarDefaults.statusBarHeight,
+                bottom = 140.dp
+            ),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            item {
+                PageTitle(text = "设置")
+            }
 
 //        item {
 //            SettingGroup(
@@ -114,74 +115,40 @@ fun ProfileSettingScreen(
 //            )
 //        }
 
-        item {
-            SettingGroup(
-                title = "本地数据",
-                items = listOf(
-                    SettingItem.ActionItem(
-                        title = "清空最近播放",
-                        subtitle = "删除本机保存的最近播放记录",
-                        icon = Icons.Default.DeleteSweep,
-                        onClick = { }
-                    ),
-                    SettingItem.ActionItem(
-                        title = "清理图片缓存",
-                        subtitle = "释放封面与头像缓存空间",
-                        icon = Icons.Default.CleaningServices,
-                        onClick = { profileSettingViewModel.clearArtworkCache() }
+            item {
+                SettingGroup(
+                    title = "本地数据",
+                    items = listOf(
+                        SettingItem.ActionItem(
+                            title = "清空最近播放",
+                            subtitle = "删除本机保存的最近播放记录",
+                            icon = Icons.Default.DeleteSweep,
+                            onClick = { }
+                        ),
+                        SettingItem.ActionItem(
+                            title = "清除缓存",
+                            subtitle = "释放歌曲、封面与头像的缓存空间",
+                            icon = Icons.Default.CleaningServices,
+                            onClick = { profileSettingViewModel.clearCache() }
+                        )
                     )
                 )
-            )
-        }
+            }
 
-        item {
-            SettingGroup(
-                title = "账号",
-                items = listOf(
-                    SettingItem.ActionItem(
-                        title = "退出登录",
-                        subtitle = "清除登录状态并返回登录页",
-                        icon = Icons.Default.Logout,
-                        onClick = onLogout
+            item {
+                SettingGroup(
+                    title = "账号",
+                    items = listOf(
+                        SettingItem.ActionItem(
+                            title = "退出登录",
+                            subtitle = "清除登录状态并返回登录页",
+                            icon = Icons.Default.Logout,
+                            onClick = onLogout
+                        )
                     )
                 )
-            )
+            }
         }
-    }
-}
-
-@Composable
-private fun SettingTopBar(
-    onBack: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(42.dp)
-                .clip(CircleShape)
-                .clickable(onClick = onBack),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = null,
-                tint = LocalMusicThemeColors.current.textPrimary,
-                modifier = Modifier.size(25.dp)
-            )
-        }
-
-        Text(
-            text = "设置",
-            color = LocalMusicThemeColors.current.textPrimary,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 4.dp)
-        )
     }
 }
 

@@ -11,14 +11,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
@@ -27,7 +24,6 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -36,7 +32,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -58,123 +53,87 @@ fun MusicCollectionScaffold(
     listState: LazyListState? = null,
     playAllEnabled: Boolean = false,
     onPlayAllClick: () -> Unit = {},
+    // 不为 null 时可以下拉刷新；只有列表跟着往下走，背景和返回按钮不动
+    onRefresh: (() -> Unit)? = null,
+    isRefreshing: Boolean = false,
+    refreshError: String? = null,
     content: (LazyListScope.(listAreaModifier: Modifier) -> Unit)? = null
 ) {
-    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val statusBarTop = GlassTopBarDefaults.statusBarHeight
     val lazyListState = listState ?: rememberLazyListState()
 
-    BoxWithConstraints(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        LocalMusicThemeColors.current.bgTop,
-                        LocalMusicThemeColors.current.bgBottom
-                    )
-                )
-            )
+    // 返回按钮固定在左上角；标题在列表第一项，滚走后顶栏正中显示小标题
+    GlassTopBarScaffold(
+        listState = lazyListState,
+        modifier = modifier,
+        title = title,
+        onBack = onBack
     ) {
-        val bottomPadding = 120.dp
-        val itemSpacing = 14.dp
-        val listMinHeight = (
-            maxHeight -
-                statusBarTop -
-                8.dp -
-                50.dp -
-                58.dp -
-                48.dp -
-                itemSpacing * 3 -
-                bottomPadding
-            ).coerceAtLeast(320.dp)
-
-        LazyColumn(
-            state = lazyListState,
+        MusicPullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { onRefresh?.invoke() },
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(
-                start = 18.dp,
-                end = 18.dp,
-                top = statusBarTop + 8.dp,
-                bottom = bottomPadding
-            ),
-            verticalArrangement = Arrangement.spacedBy(itemSpacing)
+            refreshError = refreshError,
+            enabled = onRefresh != null
         ) {
-            item {
-                MusicCollectionTopBar(
-                    title = title,
-                    onBack = onBack
-                )
-            }
+            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                val bottomPadding = 120.dp
+                val itemSpacing = 14.dp
+                val listMinHeight = (
+                    maxHeight -
+                        statusBarTop -
+                        GlassTopBarDefaults.RowHeight -
+                        58.dp -
+                        48.dp -
+                        itemSpacing * 3 -
+                        bottomPadding
+                    ).coerceAtLeast(320.dp)
 
-            item {
-                MusicCollectionTag(
-                    text = tag,
-                    icon = icon
-                )
-            }
+                LazyColumn(
+                    state = lazyListState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = GlassTopBarDefaults.HorizontalPadding,
+                        end = GlassTopBarDefaults.HorizontalPadding,
+                        // 标题和顶栏的返回按钮在同一行
+                        top = statusBarTop,
+                        bottom = bottomPadding
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(itemSpacing)
+                ) {
+                    item {
+                        PageTitle(text = title)
+                    }
 
-            item {
-                PlayAllButton(
-                    enabled = playAllEnabled,
-                    onClick = onPlayAllClick
-                )
-            }
+                    item {
+                        MusicCollectionTag(
+                            text = tag,
+                            icon = icon
+                        )
+                    }
 
-            if (content == null) {
-                item {
-                    EmptyListState(
-                        icon = icon,
-                        title = emptyTitle,
-                        description = emptyDescription,
-                        modifier = Modifier.height(listMinHeight)
-                    )
+                    item {
+                        PlayAllButton(
+                            enabled = playAllEnabled,
+                            onClick = onPlayAllClick
+                        )
+                    }
+
+                    if (content == null) {
+                        item {
+                            EmptyListState(
+                                icon = icon,
+                                title = emptyTitle,
+                                description = emptyDescription,
+                                modifier = Modifier.height(listMinHeight)
+                            )
+                        }
+                    } else {
+                        content(Modifier.height(listMinHeight))
+                    }
                 }
-            } else {
-                content(Modifier.height(listMinHeight))
             }
         }
-    }
-}
-
-@Composable
-private fun MusicCollectionTopBar(
-    title: String,
-    onBack: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(50.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(42.dp)
-                .clip(CircleShape)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = onBack
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = null,
-                tint = LocalMusicThemeColors.current.textPrimary,
-                modifier = Modifier.size(25.dp)
-            )
-        }
-
-        Text(
-            text = title,
-            color = LocalMusicThemeColors.current.textPrimary,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(start = 4.dp)
-        )
     }
 }
 

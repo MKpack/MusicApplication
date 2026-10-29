@@ -20,13 +20,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Email
@@ -35,7 +34,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -45,7 +43,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
@@ -61,6 +58,9 @@ import com.canhub.cropper.CropImageContract
 import com.canhub.cropper.CropImageContractOptions
 import com.canhub.cropper.CropImageOptions
 import com.example.musicapplication.R
+import com.example.musicapplication.ui.component.GlassTopBarDefaults
+import com.example.musicapplication.ui.component.GlassTopBarScaffold
+import com.example.musicapplication.ui.component.PageTitle
 import com.example.musicapplication.ui.theme.LocalMusicThemeColors
 import com.example.musicapplication.utils.LocalAudioMetaDataReader
 
@@ -108,36 +108,38 @@ fun ProfileAccountScreen(
         }
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        LocalMusicThemeColors.current.bgTop,
-                        LocalMusicThemeColors.current.bgBottom
-                    )
-                )
+    val listState = rememberLazyListState()
+
+    // 返回按钮固定在左上角，保存按钮固定在右上角；标题在列表第一项，滚走后顶栏正中显示小标题
+    GlassTopBarScaffold(
+        listState = listState,
+        modifier = modifier,
+        title = "账号资料",
+        onBack = onBack,
+        actions = {
+            AccountSaveButton(
+                isSaving = uiState.isSaving,
+                onClick = {
+                    profileAccountViewModel.saveProfile()
+                    onBack()
+                }
             )
+        }
     ) {
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding(),
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
-                start = 18.dp,
-                end = 18.dp,
-                top = 10.dp,
+                start = GlassTopBarDefaults.HorizontalPadding,
+                end = GlassTopBarDefaults.HorizontalPadding,
+                // 标题和顶栏的返回按钮在同一行
+                top = GlassTopBarDefaults.statusBarHeight,
                 bottom = 124.dp
             ),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
-                AccountTopBar(
-                    onBack = onBack,
-                    isSaving = uiState.isSaving,
-                    onSaveClick = { profileAccountViewModel.saveProfile() }
-                )
+                PageTitle(text = "账号资料")
             }
 
             item {
@@ -168,60 +170,27 @@ fun ProfileAccountScreen(
 }
 
 @Composable
-private fun AccountTopBar(
-    onBack: () -> Unit,
+private fun AccountSaveButton(
     isSaving: Boolean,
-    onSaveClick: () -> Unit
+    onClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+    Button(
+        onClick = onClick,
+        enabled = !isSaving,
+        shape = RoundedCornerShape(999.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = LocalMusicThemeColors.current.primary,
+            contentColor = Color.White,
+            disabledContainerColor = LocalMusicThemeColors.current.disabledContainer,
+            disabledContentColor = LocalMusicThemeColors.current.disabledContent
+        ),
+        contentPadding = PaddingValues(horizontal = 18.dp)
     ) {
-        IconButton(onClick = onBack) {
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = null,
-                tint = LocalMusicThemeColors.current.textPrimary
-            )
-        }
-
-        Column(
-            modifier = Modifier.weight(1f)
-        ) {
-            Text(
-                text = "账号资料",
-                color = LocalMusicThemeColors.current.textPrimary,
-                fontSize = 26.sp,
-                fontWeight = FontWeight.Bold
-            )
-//            Text(
-//                text = "头像和昵称可以随时更新",
-//                color = MusicTextSecondary,
-//                fontSize = 13.sp
-//            )
-        }
-
-        Button(
-            onClick = {
-                onSaveClick()
-                onBack()
-            },
-            enabled = !isSaving,
-            shape = RoundedCornerShape(999.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = LocalMusicThemeColors.current.primary,
-                contentColor = Color.White,
-                disabledContainerColor = LocalMusicThemeColors.current.disabledContainer,
-                disabledContentColor = LocalMusicThemeColors.current.disabledContent
-            ),
-            contentPadding = PaddingValues(horizontal = 18.dp)
-        ) {
-            Text(
-                text = if (isSaving) "保存中" else "保存",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
+        Text(
+            text = if (isSaving) "保存中" else "保存",
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold
+        )
     }
 }
 

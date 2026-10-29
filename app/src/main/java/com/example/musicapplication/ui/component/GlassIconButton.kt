@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
@@ -33,6 +34,8 @@ fun GlassIconButton(
     modifier: Modifier = Modifier,
     backdrop: Backdrop? = null,
     iconSize: Dp = 21.dp,
+    tint: Color = LocalMusicThemeColors.current.neutral.label,
+    enabled: Boolean = true,
 ) {
     val neutral = LocalMusicThemeColors.current.neutral
     val interaction = remember { MutableInteractionSource() }
@@ -55,6 +58,7 @@ fun GlassIconButton(
             .clickable(
                 interactionSource = interaction,
                 indication = null,
+                enabled = enabled,
                 role = Role.Button,
                 onClick = onClick
             ),
@@ -63,7 +67,7 @@ fun GlassIconButton(
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            tint = neutral.label,
+            tint = tint,
             modifier = Modifier.size(iconSize)
         )
     }
